@@ -20,6 +20,7 @@ import {
   RotateCw,
   ArrowLeft,
   Zap,
+  BarChart2,
 } from "lucide-react";
 // ⬇️ Changed: make LayoutWrapper client-only to prevent SSR hydration mismatch
 const LayoutWrapper = dynamic(
@@ -75,8 +76,8 @@ export default function AugerDetailPage() {
   useEffect(() => {
     const stateTopic = "raptor/shop/revpi-135593/state";
     const urls = [
-      "wss://raptor135593.tailc61a08.ts.net", // 443 → 9001 (Funnel)
-      "wss://raptor135593.tailc61a08.ts.net:444", // 444 → 9001 (Funnel fallback for Pi)
+      "wss://raptor3.tailc61a08.ts.net/", // 443 → 9001 (Funnel)
+      "wss://raptor3.tailc61a08.ts.net:444", // 444 → 9001 (Funnel fallback for Pi)
     ];
 
     let destroyed = false;
@@ -292,6 +293,12 @@ export default function AugerDetailPage() {
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Dashboard
+              </Button>
+            </Link>
+            <Link href={`/auger/${id}/overview`}>
+              <Button className="bg-orange-600 hover:bg-orange-700 text-white">
+                <BarChart2 className="w-4 h-4 mr-2" />
+                Overview
               </Button>
             </Link>
             <div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +20,7 @@ import {
 import { LayoutWrapper } from "@/components/layout-wrapper";
 
 export default function SystemOverviewPage() {
+  const { id } = useParams() as { id: string };
   const [tempControlActive, setTempControlActive] = useState(false);
   const [highLoadActive, setHighLoadActive] = useState(false);
 
@@ -27,7 +29,7 @@ export default function SystemOverviewPage() {
       <div className="space-y-4 sm:space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <Link href="/dashboard">
+            <Link href={`/auger/${id}`}>
               <Button
                 variant="outline"
                 className="bg-raptor-lightgray border-slate-600 text-white hover:bg-slate-600"
@@ -141,9 +143,15 @@ export default function SystemOverviewPage() {
                     preload="auto"
                     className="w-150 object-contain pointer-events-none"
                   >
-                    <source src="/240.webm" type="video/webm" />
+                    <source
+                      src="/sweep-animations/both/fast.webm"
+                      type="video/webm"
+                    />
                     {/* Optional fallback for Safari users */}
-                    <source src="/240.mov" type="video/quicktime" />
+                    <source
+                      src="/sweep-animations/both/fast.mov"
+                      type="video/quicktime"
+                    />
                     Your browser does not support the video tag.
                   </video>
                 </div>
