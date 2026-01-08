@@ -79,6 +79,7 @@ export default function AugerDetailPage() {
       "wss://raptor3.tailc61a08.ts.net/", // 443 → 9001 (Funnel)
       "wss://raptor3.tailc61a08.ts.net:444", // 444 → 9001 (Funnel fallback for Pi)
     ];
+    //fix
 
     let destroyed = false;
     let client: mqtt.MqttClient | null = null;
