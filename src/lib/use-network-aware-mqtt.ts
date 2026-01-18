@@ -9,7 +9,7 @@ import mqtt from "mqtt";
 // 2. Current network connectivity status
 
 const LOCAL_MQTT_URL = "ws://localhost:9002";
-const CLOUD_MQTT_URL = process.env.NEXT_PUBLIC_MQTT_WS_URL || "ws://3.141.116.27:9001";
+const CLOUD_MQTT_URL = process.env.NEXT_PUBLIC_MQTT_WS_URL || "wss://3-141-116-27.sslip.io:9443";
 const CLOUD_MQTT_USER = process.env.NEXT_PUBLIC_MQTT_USER || "raptor";
 const CLOUD_MQTT_PASS = process.env.NEXT_PUBLIC_MQTT_PASS || "raptorMQTT2025";
 // Use nginx proxy to avoid CORS issues when running on Pi
