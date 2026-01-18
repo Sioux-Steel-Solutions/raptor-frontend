@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import mqtt from "mqtt";
 
-// Network-aware MQTT hook
+// Network-aware MQTT hook (v2 - WSS support)
 // Automatically switches between local and cloud brokers based on:
 // 1. Whether we're running on the Pi (can reach network-spinner)
 // 2. Current network connectivity status
