@@ -1,0 +1,16 @@
+[Unit]
+Description=Raptor HMI Chromium Switcher
+After=network.target graphical.target
+Wants=graphical.target
+
+[Service]
+Type=simple
+User=pi
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pi/.Xauthority
+ExecStart=/home/pi/raptor-frontend/chromium-switcher.sh --kiosk
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target

@@ -5,7 +5,6 @@ import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
-  RotateCw,
   Wrench,
   BarChart3,
   Bell,
@@ -14,7 +13,10 @@ import {
   HelpCircle,
   LogOut,
   ChevronLeft,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
+import { useNetworkStatus } from "@/lib/use-network-status";
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -51,6 +53,7 @@ function getInitialCollapsed(): boolean {
 
 export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const { isOnPi, isOnline, mode } = useNetworkStatus();
 
   // Persisted state used in uncontrolled mode
   const [persistedCollapsed, setPersistedCollapsed] = useState<boolean>(
@@ -183,18 +186,32 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
         </ul>
       </div>
 
+      {/* Network Status - Only shows on Pi */}
+      {isOnPi && (
+        <div className="px-4 py-2 border-t border-slate-700">
+          <div className={`flex items-center justify-center px-2 py-2 rounded text-xs font-medium ${
+            isOnline
+              ? "bg-green-900/30 text-green-400"
+              : "bg-amber-900/30 text-amber-400"
+          }`}>
+            {isOnline ? (
+              <>
+                <Wifi className="w-4 h-4 flex-shrink-0" />
+                {!isCollapsed && <span className="ml-2">Online</span>}
+              </>
+            ) : (
+              <>
+                <WifiOff className="w-4 h-4 flex-shrink-0" />
+                {!isCollapsed && <span className="ml-2">Offline</span>}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Bottom items */}
       <div className="p-4 border-t border-slate-700">
         <ul className="space-y-2">
-          <li>
-            <a
-              href="#"
-              className="flex items-center px-4 py-3 text-slate-300 hover:bg-raptor-lightgray hover:text-white transition-colors"
-            >
-              <HelpCircle className="w-5 h-5" />
-              {!isCollapsed && <span className="ml-3">Help</span>}
-            </a>
-          </li>
           <li>
             <Link
               href="/"

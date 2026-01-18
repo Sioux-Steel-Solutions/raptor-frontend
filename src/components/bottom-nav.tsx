@@ -5,13 +5,15 @@ import {
   LayoutDashboard,
   Wrench,
   BarChart3,
-  Bell,
-  Users,
   Settings,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
+import { useNetworkStatus } from "@/lib/use-network-status";
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { isOnPi, isOnline } = useNetworkStatus();
 
   const navItems = [
     {
@@ -59,6 +61,26 @@ export function BottomNav() {
             </Link>
           );
         })}
+        {/* Network status indicator - only on Pi */}
+        {isOnPi && (
+          <div className={`flex items-center justify-center px-3 py-1 mx-1 rounded text-xs font-medium ${
+            isOnline
+              ? "bg-green-900/40 text-green-400"
+              : "bg-amber-900/40 text-amber-400"
+          }`}>
+            {isOnline ? (
+              <>
+                <Wifi className="w-4 h-4" />
+                <span className="ml-1">Online</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="w-4 h-4" />
+                <span className="ml-1">Offline</span>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
