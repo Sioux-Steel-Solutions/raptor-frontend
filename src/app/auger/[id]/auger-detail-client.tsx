@@ -55,6 +55,11 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
   const [wheelDirection, setWheelDirection] = useState<"fwd" | "rev">("fwd");
   const lastDirCmdRef = useRef<{ direction: string; time: number } | null>(null);
 
+  // wheel speed from MQTT (P0122 value, 100-1200 range)
+  const [wheelSpeed, setWheelSpeed] = useState<number>(600);
+  const [wheelSpeedSlider, setWheelSpeedSlider] = useState<number[]>([600]);
+  const lastSpeedCmdRef = useRef<{ speed: number; time: number } | null>(null);
+
   // Network-aware MQTT connection (auto-switches local/cloud)
   const { subscribe, publish, topics, isConnected, mode, isOnline } = useNetworkAwareMqtt({
     onMessage: (_topic, payload) => {
@@ -72,6 +77,14 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
         // Parse wheel direction from state message
         if (data?.wheel_direction === "fwd" || data?.wheel_direction === "rev") {
           setWheelDirection(data.wheel_direction);
+        }
+        // Parse wheel speed from state message
+        if (typeof data?.wheel_speed === "number") {
+          setWheelSpeed(data.wheel_speed);
+          // Only update slider if not actively being dragged (avoid fighting with user)
+          if (!lastSpeedCmdRef.current || Date.now() - lastSpeedCmdRef.current.time > 3000) {
+            setWheelSpeedSlider([data.wheel_speed]);
+          }
         }
       } catch {
         // ignore malformed payloads
@@ -153,6 +166,28 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
 
     // Optimistic UI update
     setWheelDirection(direction);
+  };
+
+  // helper to publish speed commands with debouncing
+  const publishSpeed = (speed: number) => {
+    const now = Date.now();
+    const last = lastSpeedCmdRef.current;
+
+    // Debounce: ignore if same speed sent within 500ms (allow faster updates for slider)
+    if (last && last.speed === speed && now - last.time < 500) {
+      return;
+    }
+
+    lastSpeedCmdRef.current = { speed, time: now };
+
+    const payload = JSON.stringify({
+      wheel_speed: speed,
+    });
+    console.log(`[CMD ${now}] Publishing wheel_speed=${speed} to ${topics.cmd}`);
+    publish(topics.cmd, payload, { qos: 1 });
+
+    // Optimistic UI update
+    setWheelSpeed(speed);
   };
 
   // smooth rotation driven by requestAnimationFrame
@@ -382,6 +417,42 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
                     <RotateCw className="w-4 h-4 mr-2 scale-x-[-1]" />
                     REVERSE (CCW)
                   </Button>
+                </div>
+              </div>
+
+              {/* Wheel Speed Control */}
+              <div className="bg-raptor-lightgray rounded-lg p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Gauge className="w-5 h-5 text-blue-400" />
+                    <span className="text-white font-medium">Wheel Speed</span>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className="bg-blue-600 text-white border-0 px-3 py-1 font-mono"
+                  >
+                    {wheelSpeed}
+                  </Badge>
+                </div>
+                <Slider
+                  value={wheelSpeedSlider}
+                  onValueChange={(val) => {
+                    setWheelSpeedSlider(val);
+                  }}
+                  onValueCommit={(val) => {
+                    publishSpeed(val[0]);
+                  }}
+                  min={100}
+                  max={1200}
+                  step={50}
+                />
+                <div className="flex justify-between text-xs text-slate-400 mt-2">
+                  <span>100 (Slow)</span>
+                  <span>600</span>
+                  <span>1200 (Fast)</span>
+                </div>
+                <div className="text-xs text-slate-500 mt-2">
+                  Inner wheel: {wheelSpeedSlider[0]} | Outer wheel: {Math.round(wheelSpeedSlider[0] * 0.9167)}
                 </div>
               </div>
 
