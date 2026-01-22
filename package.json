@@ -10,7 +10,9 @@
     "start": "next start",
     "start:local": "npx serve out -l 3000",
     "lint": "next lint",
-    "deploy:pi": "npm run build:local && ./scripts/deploy-to-pi.sh"
+    "deploy:pi": "npm run build:local && ./scripts/deploy-to-pi.sh",
+    "test:sweep": "node scripts/test-sweep-control.js",
+    "test:direction": "node scripts/test-direction-control.js"
   },
   "dependencies": {
     "@radix-ui/react-slider": "^1.3.5",

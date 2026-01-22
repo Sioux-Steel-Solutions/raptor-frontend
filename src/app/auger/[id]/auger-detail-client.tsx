@@ -19,6 +19,7 @@ import {
   ArrowLeft,
   Zap,
   BarChart2,
+  ArrowRightLeft,
 } from "lucide-react";
 // ⬇️ Changed: make LayoutWrapper client-only to prevent SSR hydration mismatch
 const LayoutWrapper = dynamic(
@@ -50,6 +51,10 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
   // voltage from MQTT
   const [voltage, setVoltage] = useState<number>(0);
 
+  // wheel direction from MQTT ("fwd" or "rev")
+  const [wheelDirection, setWheelDirection] = useState<"fwd" | "rev">("fwd");
+  const lastDirCmdRef = useRef<{ direction: string; time: number } | null>(null);
+
   // Network-aware MQTT connection (auto-switches local/cloud)
   const { subscribe, publish, topics, isConnected, mode, isOnline } = useNetworkAwareMqtt({
     onMessage: (_topic, payload) => {
@@ -63,6 +68,10 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
           typeof data?.paddle_running === "boolean"
         ) {
           setIsRunning(data.wheels_running && data.paddle_running);
+        }
+        // Parse wheel direction from state message
+        if (data?.wheel_direction === "fwd" || data?.wheel_direction === "rev") {
+          setWheelDirection(data.wheel_direction);
         }
       } catch {
         // ignore malformed payloads
@@ -121,6 +130,29 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
     });
     console.log(`[CMD ${now}] Publishing ${running ? "START" : "STOP"} to ${topics.cmd}`);
     publish(topics.cmd, payload, { qos: 1 });
+  };
+
+  // helper to publish direction commands with debouncing
+  const publishDirection = (direction: "fwd" | "rev") => {
+    const now = Date.now();
+    const last = lastDirCmdRef.current;
+
+    // Debounce: ignore if same command sent within 2 seconds
+    if (last && last.direction === direction && now - last.time < 2000) {
+      console.log(`[CMD] Debounced duplicate direction command: ${direction}`);
+      return;
+    }
+
+    lastDirCmdRef.current = { direction, time: now };
+
+    const payload = JSON.stringify({
+      wheel_direction: direction,
+    });
+    console.log(`[CMD ${now}] Publishing direction=${direction} to ${topics.cmd}`);
+    publish(topics.cmd, payload, { qos: 1 });
+
+    // Optimistic UI update
+    setWheelDirection(direction);
   };
 
   // smooth rotation driven by requestAnimationFrame
@@ -311,6 +343,48 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
                 </Button>
               </div>
 
+              {/* Direction Control */}
+              <div className="bg-raptor-lightgray rounded-lg p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <ArrowRightLeft className="w-5 h-5 text-orange-400" />
+                    <span className="text-white font-medium">Wheel Direction</span>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={`${wheelDirection === "fwd" ? "bg-green-600" : "bg-blue-600"} text-white border-0 px-3 py-1`}
+                  >
+                    {wheelDirection === "fwd" ? "FORWARD" : "REVERSE"}
+                  </Badge>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => publishDirection("fwd")}
+                    disabled={wheelDirection === "fwd"}
+                    className={`flex-1 h-12 text-white ${
+                      wheelDirection === "fwd"
+                        ? "bg-green-600 cursor-default"
+                        : "bg-slate-600 hover:bg-green-600"
+                    }`}
+                  >
+                    <RotateCw className="w-4 h-4 mr-2" />
+                    FORWARD (CW)
+                  </Button>
+                  <Button
+                    onClick={() => publishDirection("rev")}
+                    disabled={wheelDirection === "rev"}
+                    className={`flex-1 h-12 text-white ${
+                      wheelDirection === "rev"
+                        ? "bg-blue-600 cursor-default"
+                        : "bg-slate-600 hover:bg-blue-600"
+                    }`}
+                  >
+                    <RotateCw className="w-4 h-4 mr-2 scale-x-[-1]" />
+                    REVERSE (CCW)
+                  </Button>
+                </div>
+              </div>
+
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-white font-medium text-sm sm:text-base">
@@ -450,7 +524,9 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
                       </div>
                       <div className="mt-2 text-center">
                         Direction
-                        <div className="font-mono text-orange-400">CW</div>
+                        <div className={`font-mono ${wheelDirection === "fwd" ? "text-green-400" : "text-blue-400"}`}>
+                          {wheelDirection === "fwd" ? "CW" : "CCW"}
+                        </div>
                       </div>
                     </div>
                   </div>
