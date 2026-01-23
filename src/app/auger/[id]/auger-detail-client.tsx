@@ -50,11 +50,10 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
   const [currentThroughput, setCurrentThroughput] = useState(0);
   const [operatingHours, setOperatingHours] = useState(1247.5);
 
-  // Per-VFD telemetry (NEW - replaces fake temperature/humidity)
+  // Per-VFD telemetry (NEW - replaces fake temperature/humidity/chainRpm)
   const [chainTelemetry, setChainTelemetry] = useState<VFDTelemetry | null>(null);
   const [innerWheelTelemetry, setInnerWheelTelemetry] = useState<VFDTelemetry | null>(null);
   const [outerWheelTelemetry, setOuterWheelTelemetry] = useState<VFDTelemetry | null>(null);
-  const [chainRpm, setChainRpm] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastCmdRef = useRef<{ running: boolean; time: number } | null>(null);
 
@@ -265,13 +264,8 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
           const diff = target - prev;
           return prev + diff * 0.1 + (Math.random() - 0.5) * 2;
         });
-        // Note: temperature/humidity simulation removed - now using real VFD telemetry
+        // Note: temperature/humidity/chainRpm simulation removed - now using real VFD telemetry
         setOperatingHours((prev) => prev + 0.001);
-        setChainRpm((prev) => {
-          if (!isRunning) return 0;
-          const baseRpm = 45 + (currentThroughput / 150) * 30;
-          return baseRpm + (Math.random() - 0.5) * 2;
-        });
       }, 100);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -543,23 +537,24 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
                     Chain RPM
                   </span>
                   <span className="text-xl sm:text-2xl font-mono text-white">
-                    {chainRpm.toFixed(0)} RPM
+                    {chainTelemetry?.actual_rpm ?? 0} RPM
                   </span>
                 </div>
                 <div className="w-full bg-slate-800 rounded-full h-2">
                   <div
                     className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                     style={{
-                      width: `${Math.min(100, (chainRpm / 10000) * 100)}%`,
+                      // Scale: 0-600 RPM range for chain motor
+                      width: `${Math.min(100, ((chainTelemetry?.actual_rpm ?? 0) / 600) * 100)}%`,
                     }}
                   />
                 </div>
                 <div className="flex flex-col gap-1 sm:flex-row sm:justify-between text-xs text-slate-400">
-                  <span>Optimal Range: 40–80 RPM</span>
-                  {chainRpm > 80 && (
-                    <span className="text-yellow-400 flex items-center gap-1">
-                      <AlertTriangle className="w-3 h-3" />
-                      High RPM
+                  <span>Target: {chainTelemetry?.target_rpm ?? 0} RPM</span>
+                  {(chainTelemetry?.actual_rpm ?? 0) > 0 && chainTelemetry?.drive_state === 1 && (
+                    <span className="text-green-400 flex items-center gap-1">
+                      <RotateCw className="w-3 h-3 animate-spin" />
+                      Running
                     </span>
                   )}
                 </div>
