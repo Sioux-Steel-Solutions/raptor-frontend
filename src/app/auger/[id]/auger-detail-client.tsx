@@ -12,8 +12,6 @@ import {
   Play,
   Square,
   AlertTriangle,
-  Thermometer,
-  Droplets,
   Gauge,
   RotateCw,
   ArrowLeft,
@@ -35,15 +33,27 @@ interface AugerDetailProps {
   id: string;
 }
 
+// Per-VFD telemetry from raptor-core
+interface VFDTelemetry {
+  target_rpm: number;
+  actual_rpm: number;
+  voltage: number;
+  amps: number;
+  drive_state: number;
+}
+
 export function AugerDetailClient({ id }: AugerDetailProps) {
 
   const [isRunning, setIsRunning] = useState(false);
   const [augerPosition, setAugerPosition] = useState(0);
   const [targetThroughput, setTargetThroughput] = useState([5000]);
   const [currentThroughput, setCurrentThroughput] = useState(0);
-  const [temperature, setTemperature] = useState(68.5);
-  const [humidity, setHumidity] = useState(45.2);
   const [operatingHours, setOperatingHours] = useState(1247.5);
+
+  // Per-VFD telemetry (NEW - replaces fake temperature/humidity)
+  const [chainTelemetry, setChainTelemetry] = useState<VFDTelemetry | null>(null);
+  const [innerWheelTelemetry, setInnerWheelTelemetry] = useState<VFDTelemetry | null>(null);
+  const [outerWheelTelemetry, setOuterWheelTelemetry] = useState<VFDTelemetry | null>(null);
   const [chainRpm, setChainRpm] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastCmdRef = useRef<{ running: boolean; time: number } | null>(null);
@@ -68,9 +78,25 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
     onMessage: (_topic, payload) => {
       try {
         const data = JSON.parse(payload.toString());
-        if (typeof data?.voltage === "number") {
+
+        // Parse per-VFD telemetry (NEW)
+        if (data?.chain) {
+          setChainTelemetry(data.chain as VFDTelemetry);
+        }
+        if (data?.inner_wheel) {
+          setInnerWheelTelemetry(data.inner_wheel as VFDTelemetry);
+        }
+        if (data?.outer_wheel) {
+          setOuterWheelTelemetry(data.outer_wheel as VFDTelemetry);
+        }
+
+        // Voltage - use chain voltage if available, else flat field
+        if (data?.chain?.voltage) {
+          setVoltage(data.chain.voltage);
+        } else if (typeof data?.voltage === "number") {
           setVoltage(data.voltage);
         }
+
         if (
           typeof data?.wheels_running === "boolean" &&
           typeof data?.paddle_running === "boolean"
@@ -123,8 +149,7 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
       setAngleRaw(auger.position); // seed the continuous angle from initial position
       setCurrentThroughput(auger.throughput);
       setTargetThroughput([auger.targetThroughput]);
-      setTemperature(auger.temperature);
-      setHumidity(auger.humidity);
+      // Note: temperature/humidity removed - now using real VFD telemetry
       setIsRunning(auger.isRunning);
     }
   }, [auger]);
@@ -240,10 +265,7 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
           const diff = target - prev;
           return prev + diff * 0.1 + (Math.random() - 0.5) * 2;
         });
-        setTemperature((prev) => prev + (Math.random() - 0.5) * 0.5);
-        setHumidity((prev) =>
-          Math.max(0, Math.min(100, prev + (Math.random() - 0.5) * 1))
-        );
+        // Note: temperature/humidity simulation removed - now using real VFD telemetry
         setOperatingHours((prev) => prev + 0.001);
         setChainRpm((prev) => {
           if (!isRunning) return 0;
@@ -620,74 +642,96 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
             </Card>
           </div>
 
-          {/* Environmental Monitoring */}
+          {/* Motor Telemetry - Real VFD Data */}
           <Card className="bg-raptor-gray border-slate-700 xl:col-span-3">
             <CardHeader>
               <CardTitle className="text-white text-lg">
-                Environmental Monitoring
+                Motor Telemetry
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Chain Motor */}
                 <div className="bg-raptor-lightgray rounded-lg p-3 sm:p-4 space-y-2">
                   <div className="flex items-center gap-2">
-                    <Thermometer className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" />
+                    <Gauge className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" />
                     <span className="text-slate-300 font-medium text-sm sm:text-base">
-                      Temperature
+                      Chain Motor
                     </span>
                   </div>
                   <div className="text-2xl sm:text-3xl font-mono text-white">
-                    {temperature.toFixed(1)}°F
+                    {chainTelemetry?.amps?.toFixed(1) ?? "0.0"}A
                   </div>
-                  {temperature > 80 && (
-                    <div className="flex items-center gap-2 text-yellow-400">
-                      <AlertTriangle className="w-4 h-4" />
-                      <span className="text-xs font-medium">HIGH TEMP</span>
+                  <div className="text-sm text-slate-400">
+                    {chainTelemetry?.actual_rpm ?? 0} RPM
+                  </div>
+                  {chainTelemetry?.drive_state === 1 && (
+                    <div className="flex items-center gap-2 text-green-400">
+                      <RotateCw className="w-4 h-4 animate-spin" />
+                      <span className="text-xs font-medium">RUNNING</span>
                     </div>
                   )}
                 </div>
 
+                {/* Inner Wheel Motor */}
                 <div className="bg-raptor-lightgray rounded-lg p-3 sm:p-4 space-y-2">
                   <div className="flex items-center gap-2">
-                    <Droplets className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
+                    <RotateCw className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
                     <span className="text-slate-300 font-medium text-sm sm:text-base">
-                      Humidity
+                      Inner Wheel
                     </span>
                   </div>
                   <div className="text-2xl sm:text-3xl font-mono text-white">
-                    {humidity.toFixed(1)}%
+                    {innerWheelTelemetry?.amps?.toFixed(1) ?? "0.0"}A
                   </div>
-                  {humidity > 60 && (
-                    <div className="flex items-center gap-2 text-yellow-400">
-                      <AlertTriangle className="w-4 h-4" />
-                      <span className="text-xs font-medium">HIGH HUMIDITY</span>
+                  <div className="text-sm text-slate-400">
+                    {innerWheelTelemetry?.actual_rpm ?? 0} RPM
+                  </div>
+                  {innerWheelTelemetry?.drive_state === 1 && (
+                    <div className="flex items-center gap-2 text-green-400">
+                      <RotateCw className="w-4 h-4 animate-spin" />
+                      <span className="text-xs font-medium">RUNNING</span>
                     </div>
                   )}
                 </div>
 
+                {/* Outer Wheel Motor */}
                 <div className="bg-raptor-lightgray rounded-lg p-3 sm:p-4 space-y-2">
                   <div className="flex items-center gap-2">
-                    <Gauge className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
+                    <RotateCw className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
                     <span className="text-slate-300 font-medium text-sm sm:text-base">
-                      Motor Load
+                      Outer Wheel
                     </span>
                   </div>
                   <div className="text-2xl sm:text-3xl font-mono text-white">
-                    {isRunning ? "87.3" : "0.0"}%
+                    {outerWheelTelemetry?.amps?.toFixed(1) ?? "0.0"}A
                   </div>
+                  <div className="text-sm text-slate-400">
+                    {outerWheelTelemetry?.actual_rpm ?? 0} RPM
+                  </div>
+                  {outerWheelTelemetry?.drive_state === 1 && (
+                    <div className="flex items-center gap-2 text-green-400">
+                      <RotateCw className="w-4 h-4 animate-spin" />
+                      <span className="text-xs font-medium">RUNNING</span>
+                    </div>
+                  )}
                 </div>
 
+                {/* DC Bus Voltage */}
                 <div className="bg-raptor-lightgray rounded-lg p-3 sm:p-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 sm:w-6 sm:h-6 bg-purple-400 rounded-full flex items-center justify-center">
                       <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                     </div>
                     <span className="text-slate-300 font-medium text-sm sm:text-base">
-                      Voltage
+                      DC Bus Voltage
                     </span>
                   </div>
                   <div className="text-2xl sm:text-3xl font-mono text-white">
-                    {voltage.toFixed(0)} Volts
+                    {voltage.toFixed(0)}V
+                  </div>
+                  <div className="text-sm text-slate-400">
+                    480V 3-Phase Input
                   </div>
                 </div>
               </div>
