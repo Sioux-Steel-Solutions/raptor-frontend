@@ -60,6 +60,9 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
   const [wheelSpeedSlider, setWheelSpeedSlider] = useState<number[]>([600]);
   const lastSpeedCmdRef = useRef<{ speed: number; time: number } | null>(null);
 
+  // direction warning from MQTT (empty = OK, or warning message)
+  const [directionWarning, setDirectionWarning] = useState<string>("");
+
   // Network-aware MQTT connection (auto-switches local/cloud)
   const { subscribe, publish, topics, isConnected, mode, isOnline } = useNetworkAwareMqtt({
     onMessage: (_topic, payload) => {
@@ -85,6 +88,10 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
           if (!lastSpeedCmdRef.current || Date.now() - lastSpeedCmdRef.current.time > 3000) {
             setWheelSpeedSlider([data.wheel_speed]);
           }
+        }
+        // Parse direction warning from state message
+        if (typeof data?.direction_warning === "string") {
+          setDirectionWarning(data.direction_warning);
         }
       } catch {
         // ignore malformed payloads
@@ -418,6 +425,13 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
                     REVERSE (CCW)
                   </Button>
                 </div>
+                {/* Direction Warning Banner */}
+                {directionWarning && (
+                  <div className="mt-3 p-3 bg-red-900/50 border border-red-500 rounded-lg flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                    <span className="text-red-200 text-sm">{directionWarning}</span>
+                  </div>
+                )}
               </div>
 
               {/* Wheel Speed Control */}
