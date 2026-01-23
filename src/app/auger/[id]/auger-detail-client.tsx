@@ -508,13 +508,13 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
                     publishSpeed(val[0]);
                   }}
                   min={100}
-                  max={1200}
+                  max={1500}
                   step={50}
                 />
                 <div className="flex justify-between text-xs text-slate-400 mt-2">
                   <span>100 (Slow)</span>
-                  <span>600</span>
-                  <span>1200 (Fast)</span>
+                  <span>800</span>
+                  <span>1500 (Fast)</span>
                 </div>
                 <div className="text-xs text-slate-500 mt-2">
                   Inner wheel: {wheelSpeedSlider[0]} | Outer wheel: {Math.round(wheelSpeedSlider[0] * 0.9167)}
@@ -597,13 +597,13 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
                     publishChainSpeed(val[0]);
                   }}
                   min={100}
-                  max={600}
-                  step={10}
+                  max={1200}
+                  step={50}
                 />
                 <div className="flex justify-between text-xs text-slate-400 mt-2">
                   <span>100 (Slow)</span>
-                  <span>350</span>
-                  <span>600 (Fast)</span>
+                  <span>650</span>
+                  <span>1200 (Fast)</span>
                 </div>
                 <div className="text-xs text-slate-500 mt-2">
                   Actual: {chainTelemetry?.actual_rpm ?? 0} RPM | Target: {chainTelemetry?.target_rpm ?? 0} RPM
