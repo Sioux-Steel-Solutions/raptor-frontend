@@ -69,6 +69,11 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
   const [wheelSpeedSlider, setWheelSpeedSlider] = useState<number[]>([600]);
   const lastSpeedCmdRef = useRef<{ speed: number; time: number } | null>(null);
 
+  // chain speed from MQTT (P0122 value, 100-600 range for chain motor)
+  const [chainSpeed, setChainSpeed] = useState<number>(420);
+  const [chainSpeedSlider, setChainSpeedSlider] = useState<number[]>([420]);
+  const lastChainSpeedCmdRef = useRef<{ speed: number; time: number } | null>(null);
+
   // direction warning from MQTT (empty = OK, or warning message)
   const [directionWarning, setDirectionWarning] = useState<string>("");
 
@@ -117,6 +122,14 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
         // Parse direction warning from state message
         if (typeof data?.direction_warning === "string") {
           setDirectionWarning(data.direction_warning);
+        }
+        // Parse chain speed from state message
+        if (typeof data?.chain_speed === "number") {
+          setChainSpeed(data.chain_speed);
+          // Only update slider if not actively being dragged
+          if (!lastChainSpeedCmdRef.current || Date.now() - lastChainSpeedCmdRef.current.time > 3000) {
+            setChainSpeedSlider([data.chain_speed]);
+          }
         }
       } catch {
         // ignore malformed payloads
@@ -219,6 +232,28 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
 
     // Optimistic UI update
     setWheelSpeed(speed);
+  };
+
+  // helper to publish chain speed commands with debouncing
+  const publishChainSpeed = (speed: number) => {
+    const now = Date.now();
+    const last = lastChainSpeedCmdRef.current;
+
+    // Debounce: ignore if same speed sent within 500ms
+    if (last && last.speed === speed && now - last.time < 500) {
+      return;
+    }
+
+    lastChainSpeedCmdRef.current = { speed, time: now };
+
+    const payload = JSON.stringify({
+      chain_speed: speed,
+    });
+    console.log(`[CMD ${now}] Publishing chain_speed=${speed} to ${topics.cmd}`);
+    publish(topics.cmd, payload, { qos: 1 });
+
+    // Optimistic UI update
+    setChainSpeed(speed);
   };
 
   // smooth rotation driven by requestAnimationFrame
@@ -531,32 +566,47 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
                 </div>
               </div>
 
-              <div className="bg-raptor-lightgray rounded-lg p-3 sm:p-4 space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-300 text-sm sm:text-base">
-                    Chain RPM
-                  </span>
-                  <span className="text-xl sm:text-2xl font-mono text-white">
-                    {chainTelemetry?.actual_rpm ?? 0} RPM
-                  </span>
+              {/* Chain Speed Control */}
+              <div className="bg-raptor-lightgray rounded-lg p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Gauge className="w-5 h-5 text-orange-400" />
+                    <span className="text-white font-medium">Chain Speed</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className="bg-orange-600 text-white border-0 px-3 py-1 font-mono"
+                    >
+                      {chainSpeed}
+                    </Badge>
+                    {chainTelemetry?.drive_state === 1 && (
+                      <span className="text-green-400 flex items-center gap-1 text-xs">
+                        <RotateCw className="w-3 h-3 animate-spin" />
+                        {chainTelemetry?.actual_rpm ?? 0} RPM
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="w-full bg-slate-800 rounded-full h-2">
-                  <div
-                    className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      // Scale: 0-600 RPM range for chain motor
-                      width: `${Math.min(100, ((chainTelemetry?.actual_rpm ?? 0) / 600) * 100)}%`,
-                    }}
-                  />
+                <Slider
+                  value={chainSpeedSlider}
+                  onValueChange={(val) => {
+                    setChainSpeedSlider(val);
+                  }}
+                  onValueCommit={(val) => {
+                    publishChainSpeed(val[0]);
+                  }}
+                  min={100}
+                  max={600}
+                  step={10}
+                />
+                <div className="flex justify-between text-xs text-slate-400 mt-2">
+                  <span>100 (Slow)</span>
+                  <span>350</span>
+                  <span>600 (Fast)</span>
                 </div>
-                <div className="flex flex-col gap-1 sm:flex-row sm:justify-between text-xs text-slate-400">
-                  <span>Target: {chainTelemetry?.target_rpm ?? 0} RPM</span>
-                  {(chainTelemetry?.actual_rpm ?? 0) > 0 && chainTelemetry?.drive_state === 1 && (
-                    <span className="text-green-400 flex items-center gap-1">
-                      <RotateCw className="w-3 h-3 animate-spin" />
-                      Running
-                    </span>
-                  )}
+                <div className="text-xs text-slate-500 mt-2">
+                  Actual: {chainTelemetry?.actual_rpm ?? 0} RPM | Target: {chainTelemetry?.target_rpm ?? 0} RPM
                 </div>
               </div>
             </CardContent>
