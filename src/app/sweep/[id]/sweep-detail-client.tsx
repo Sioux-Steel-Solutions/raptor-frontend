@@ -165,12 +165,12 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
     return () => clearInterval(interval);
   }, [streamFailed, showCameraFeed]);
 
-  // Auto-refresh snapshot every 500ms if stream failed
+  // Auto-refresh snapshot every 100ms (~10fps) if stream failed
   useEffect(() => {
     if (!streamFailed || !showCameraFeed) return;
     const interval = setInterval(() => {
       setSnapshotKey(k => k + 1);
-    }, 500);
+    }, 100);
     return () => clearInterval(interval);
   }, [streamFailed, showCameraFeed]);
 
@@ -680,7 +680,7 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                   <>
                     <div className="relative w-full aspect-video mb-4 overflow-hidden rounded-lg bg-black">
                       {streamFailed ? (
-                        // Fallback: refresh snapshots every 500ms
+                        // Fallback: refresh snapshots every 100ms (~10fps)
                         <img
                           key={snapshotKey}
                           src={`https://ptz-camera.tailc61a08.ts.net/?action=snapshot&t=${snapshotKey}`}
@@ -689,11 +689,12 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                           loading="eager"
                         />
                       ) : (
-                        // Primary: MJPEG stream
-                        <img
+                        // Primary: Use iframe for better MJPEG compatibility
+                        <iframe
                           src="https://ptz-camera.tailc61a08.ts.net/?action=stream"
-                          alt="PTZ Camera Feed"
-                          className="w-full h-full object-contain"
+                          title="PTZ Camera Feed"
+                          className="w-full h-full border-0"
+                          allow="autoplay"
                           onError={() => {
                             console.log("[Camera] Stream failed, falling back to snapshots");
                             setStreamFailed(true);
