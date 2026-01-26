@@ -8,6 +8,8 @@ import {
   Settings,
   Wifi,
   WifiOff,
+  ListChecks,
+  Lightbulb,
 } from "lucide-react";
 import { useNetworkStatus } from "@/lib/use-network-status";
 
@@ -15,28 +17,14 @@ export function BottomNav() {
   const pathname = usePathname();
   const { isOnPi, isOnline } = useNetworkStatus();
 
+  // Navigation items matching the design mockups
   const navItems = [
-    {
-      icon: <LayoutDashboard className="w-5 h-5" />,
-
-      href: "/dashboard",
-    },
-    {
-      icon: <Wrench className="w-5 h-5" />,
-
-      href: "/maintenance",
-    },
-    {
-      icon: <BarChart3 className="w-5 h-5" />,
-
-      href: "/analytics",
-    },
-
-    {
-      icon: <Settings className="w-5 h-5" />,
-
-      href: "/settings",
-    },
+    { icon: <LayoutDashboard className="w-5 h-5" />, href: "/dashboard" },
+    { icon: <BarChart3 className="w-5 h-5" />, href: "/analytics" },
+    { icon: <Wrench className="w-5 h-5" />, href: "/maintenance" },
+    { icon: <ListChecks className="w-5 h-5" />, href: "/programs" },
+    { icon: <Lightbulb className="w-5 h-5" />, href: "/insights" },
+    { icon: <Settings className="w-5 h-5" />, href: "/settings" },
   ];
 
   return (

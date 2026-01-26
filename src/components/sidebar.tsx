@@ -7,14 +7,14 @@ import {
   LayoutDashboard,
   Wrench,
   BarChart3,
-  Bell,
-  Users,
   Settings,
   HelpCircle,
   LogOut,
   ChevronLeft,
   Wifi,
   WifiOff,
+  ListChecks,
+  Lightbulb,
 } from "lucide-react";
 import { useNetworkStatus } from "@/lib/use-network-status";
 
@@ -53,7 +53,7 @@ function getInitialCollapsed(): boolean {
 
 export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const pathname = usePathname();
-  const { isOnPi, isOnline, mode } = useNetworkStatus();
+  const { isOnPi, isOnline } = useNetworkStatus();
 
   // Persisted state used in uncontrolled mode
   const [persistedCollapsed, setPersistedCollapsed] = useState<boolean>(
@@ -78,11 +78,17 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
     }
   }, [isCollapsed, onToggle]);
 
+  // Navigation items matching the design mockups
   const navItems = [
     {
       icon: <LayoutDashboard className="w-5 h-5" />,
-      label: "Dashboard",
+      label: "Home",
       href: "/dashboard",
+    },
+    {
+      icon: <BarChart3 className="w-5 h-5" />,
+      label: "Analytics",
+      href: "/analytics",
     },
     {
       icon: <Wrench className="w-5 h-5" />,
@@ -90,21 +96,24 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
       href: "/maintenance",
     },
     {
-      icon: <BarChart3 className="w-5 h-5" />,
-      label: "Analytics",
-      href: "/analytics",
+      icon: <ListChecks className="w-5 h-5" />,
+      label: "Programs",
+      href: "/programs",
     },
-    { icon: <Bell className="w-5 h-5" />, label: "Alerts", href: "/alerts" },
-    { icon: <Users className="w-5 h-5" />, label: "Users", href: "/users" },
     {
-      icon: <Settings className="w-5 h-5" />,
-      label: "Settings",
-      href: "/settings",
+      icon: <Lightbulb className="w-5 h-5" />,
+      label: "AI Insights",
+      href: "/insights",
     },
     {
       icon: <HelpCircle className="w-5 h-5" />,
       label: "Help",
       href: "/help",
+    },
+    {
+      icon: <Settings className="w-5 h-5" />,
+      label: "Settings",
+      href: "/settings",
     },
   ];
 
@@ -157,8 +166,10 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
       <div className="flex-1 py-6">
         <ul className="space-y-2">
           {navItems.map((item, idx) => {
+            // Check if this route is active (exact match or starts with for sub-routes)
             const isActive =
               pathname === item.href ||
+              (item.href !== "/dashboard" && pathname.startsWith(item.href + "/")) ||
               (item.href === "/dashboard" && pathname.startsWith("/auger"));
 
             return (
@@ -166,16 +177,19 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
                 <Link
                   href={item.href}
                   className={`
-                    w-full flex items-center px-4 py-3 text-slate-300
-                    hover:bg-raptor-lightgray hover:text-white transition-colors
+                    w-full flex items-center px-4 py-3 transition-colors relative
                     ${
                       isActive
-                        ? "bg-raptor-lightgray text-white border-l-4 border-yellow-400"
-                        : ""
+                        ? "bg-raptor-lightgray text-raptor-yellow"
+                        : "text-slate-300 hover:bg-raptor-lightgray hover:text-white"
                     }
                   `}
                 >
-                  <div className="flex items-center">
+                  {/* Active indicator bar */}
+                  {isActive && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-raptor-yellow" />
+                  )}
+                  <div className={`flex items-center ${isActive ? "text-raptor-yellow" : ""}`}>
                     {item.icon}
                     {!isCollapsed && <span className="ml-3">{item.label}</span>}
                   </div>
@@ -214,11 +228,11 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
         <ul className="space-y-2">
           <li>
             <Link
-              href="/"
+              href="/login"
               className="flex items-center px-4 py-3 text-slate-300 hover:bg-raptor-lightgray hover:text-white transition-colors"
             >
               <LogOut className="w-5 h-5" />
-              {!isCollapsed && <span className="ml-3">Logout</span>}
+              {!isCollapsed && <span className="ml-3">Log Out</span>}
             </Link>
           </li>
         </ul>
