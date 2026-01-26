@@ -686,24 +686,7 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
         {/* Overview Tab */}
         {activeTab === "overview" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-start gap-3">
-            <Button className="bg-raptor-yellow hover:bg-yellow-500 text-black font-bold h-9 text-sm w-50">
-              Lockout/Tagout
-            </Button>
-            <Button className="bg-raptor-yellow hover:bg-yellow-500 text-black font-bold h-9 text-sm">
-              Run Diagnostics
-            </Button>
-          </div>
-
-          <div className="flex items-center justify-start gap-3">
-            <Button
-              variant="outline"
-              className="bg-transparent border-slate-600 text-white hover:bg-slate-700 h-9 text-sm"
-            >
-              Export Report
-            </Button>
-          </div>
-
+          {/* Top Row: Notifications | LOTO Status | Action Buttons */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Notifications */}
             <Card className="bg-raptor-gray border-slate-700">
@@ -743,12 +726,30 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-red-400" />
-                  <span className="text-red-400 font-bold">LOCKED</span>
+                  <Lock className="w-5 h-5 text-red-400" />
+                  <span className="text-red-400 font-bold text-lg">LOCKED</span>
                 </div>
                 <p className="text-slate-300 text-xs">
                   Only authorized personnel can unlock this sweep.
                 </p>
+              </CardContent>
+            </Card>
+
+            {/* Action Buttons */}
+            <Card className="bg-raptor-gray border-slate-700">
+              <CardContent className="pt-4 space-y-2">
+                <Button className="w-full bg-raptor-yellow hover:bg-yellow-500 text-black font-bold h-10">
+                  Lockout/Tagout
+                </Button>
+                <Button className="w-full bg-raptor-yellow hover:bg-yellow-500 text-black font-bold h-10">
+                  Run Diagnostics
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full bg-transparent border-slate-600 text-white hover:bg-slate-700 h-10"
+                >
+                  Export Report
+                </Button>
               </CardContent>
             </Card>
           </div>
@@ -761,46 +762,37 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {/* Desktop Layout - Component labels positioned around image */}
-              <div className="hidden lg:block">
-                <div className="grid grid-cols-12 gap-4">
-                  {/* Left side - Sweep with positioned labels */}
-                  <div className="col-span-8">
-                    <div className="relative">
-                      {/* Component Labels - Positioned around the image */}
-                      <div className="grid grid-cols-3 gap-2 mb-2">
-                        {/* Chain Drive - Top Left */}
-                        <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
-                          <div className="text-white font-bold text-xs">Chain Drive</div>
-                          <div className="text-xs text-slate-300">Status: LOCKED</div>
-                          <div className="text-xs text-slate-400 mt-1">Health</div>
-                          <div className="w-full bg-slate-700 rounded-full h-1.5">
-                            <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "85%" }} />
-                          </div>
+              {/* Desktop Layout - Matches design exactly */}
+              <div className="hidden lg:grid lg:grid-cols-12 gap-4">
+                {/* Left side - Sweep with positioned labels (7 cols) */}
+                <div className="col-span-7">
+                  <div className="relative">
+                    {/* Component Labels Grid - positioned around the sweep image */}
+                    <div className="grid grid-cols-[1fr_auto_1fr] grid-rows-[auto_1fr_auto] gap-2 min-h-[400px]">
+
+                      {/* Row 1: Chain Drive (left) | empty | Motor Drive #2 (right) */}
+                      <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2 self-start">
+                        <div className="text-white font-bold text-xs">Chain Drive</div>
+                        <div className="text-xs text-slate-300">Status: LOCKED</div>
+                        <div className="text-xs text-slate-400 mt-1">Health</div>
+                        <div className="w-full bg-slate-700 rounded-full h-1.5">
+                          <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "85%" }} />
                         </div>
-                        {/* Motor Drive #2 - Top Center */}
-                        <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
-                          <div className="text-white font-bold text-xs">Motor Drive #2</div>
-                          <div className="text-xs text-slate-300">Status: LOCKED</div>
-                          <div className="text-xs text-slate-400 mt-1">Health</div>
-                          <div className="w-full bg-slate-700 rounded-full h-1.5">
-                            <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "92%" }} />
-                          </div>
-                        </div>
-                        {/* Motor Drive #1 - Top Right */}
-                        <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
-                          <div className="text-white font-bold text-xs">Motor Drive #1</div>
-                          <div className="text-xs text-slate-300">Status: LOCKED</div>
-                          <div className="text-xs text-slate-400 mt-1">Health</div>
-                          <div className="w-full bg-slate-700 rounded-full h-1.5">
-                            <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "88%" }} />
-                          </div>
+                      </div>
+                      <div /> {/* empty center top */}
+                      <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2 self-start">
+                        <div className="text-white font-bold text-xs">Motor Drive #2</div>
+                        <div className="text-xs text-slate-300">Status: LOCKED</div>
+                        <div className="text-xs text-slate-400 mt-1">Health</div>
+                        <div className="w-full bg-slate-700 rounded-full h-1.5">
+                          <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "92%" }} />
                         </div>
                       </div>
 
-                      {/* Sweep Image */}
-                      <div className="relative flex justify-center items-center bg-raptor-dark/30 rounded-lg py-4">
-                        <div className="absolute top-2 right-2 bg-raptor-lightgray px-2 py-1 rounded text-xs text-slate-300 font-medium">
+                      {/* Row 2: empty | SWEEP IMAGE | Motor Drive #1 (right middle) */}
+                      <div /> {/* empty left middle */}
+                      <div className="relative flex justify-center items-center bg-raptor-dark/30 rounded-lg p-4">
+                        <div className="absolute top-2 right-2 bg-green-500 px-2 py-1 rounded text-xs text-white font-bold">
                           FRONT
                         </div>
                         {isRunning ? (
@@ -810,7 +802,7 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                             muted
                             playsInline
                             preload="auto"
-                            className="max-h-[280px] object-contain pointer-events-none"
+                            className="max-h-[240px] object-contain pointer-events-none"
                           >
                             <source src="/sweep-animations/both/fast.webm" type="video/webm" />
                             <source src="/sweep-animations/both/fast.mov" type="video/quicktime" />
@@ -819,89 +811,161 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                           <Image
                             src="/raptor-240-stopped.png"
                             alt="Sweep system stopped"
-                            width={400}
-                            height={280}
-                            className="max-h-[280px] object-contain"
+                            width={350}
+                            height={240}
+                            className="max-h-[240px] object-contain"
                           />
                         )}
                       </div>
-
-                      {/* Bottom row labels */}
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {/* Paddle Chain - Bottom Left */}
-                        <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
-                          <div className="text-white font-bold text-xs">Paddle Chain</div>
-                          <div className="text-xs text-slate-300">Status: LOCKED</div>
-                          <div className="text-xs text-slate-400 mt-1">Health</div>
-                          <div className="w-full bg-slate-700 rounded-full h-1.5">
-                            <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "78%" }} />
-                          </div>
+                      <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2 self-center">
+                        <div className="text-white font-bold text-xs">Motor Drive #1</div>
+                        <div className="text-xs text-slate-300">Status: LOCKED</div>
+                        <div className="text-xs text-slate-400 mt-1">Health</div>
+                        <div className="w-full bg-slate-700 rounded-full h-1.5">
+                          <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "88%" }} />
                         </div>
-                        {/* Bearing - Bottom Right */}
-                        <div className="bg-raptor-lightgray border-2 border-raptor-yellow rounded-lg p-2">
-                          <div className="text-white font-bold text-xs">Bearing</div>
-                          <div className="text-xs text-slate-300">Status: LOCKED</div>
-                          <div className="text-xs text-slate-400 mt-1">Health</div>
-                          <div className="w-full bg-slate-700 rounded-full h-1.5">
-                            <div className="bg-raptor-yellow h-1.5 rounded-full" style={{ width: "45%" }} />
-                          </div>
+                      </div>
+
+                      {/* Row 3: Paddle Chain (left) | empty | Bearing (right) */}
+                      <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2 self-end">
+                        <div className="text-white font-bold text-xs">Paddle Chain</div>
+                        <div className="text-xs text-slate-300">Status: LOCKED</div>
+                        <div className="text-xs text-slate-400 mt-1">Health</div>
+                        <div className="w-full bg-slate-700 rounded-full h-1.5">
+                          <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "78%" }} />
+                        </div>
+                      </div>
+                      <div /> {/* empty center bottom */}
+                      <div className="bg-raptor-lightgray border-2 border-raptor-yellow rounded-lg p-2 self-end">
+                        <div className="text-white font-bold text-xs">Bearing</div>
+                        <div className="text-xs text-slate-300">Status: LOCKED</div>
+                        <div className="text-xs text-slate-400 mt-1">Health</div>
+                        <div className="w-full bg-slate-700 rounded-full h-1.5">
+                          <div className="bg-raptor-yellow h-1.5 rounded-full" style={{ width: "45%" }} />
                         </div>
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* Right side - Metrics */}
-                  <div className="col-span-4 space-y-3">
-                    {/* Grain Metrics */}
-                    <div className="bg-raptor-lightgray rounded-lg p-3">
-                      <h4 className="text-white font-bold text-sm mb-2">Grain Metrics</h4>
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-400">Grain Type:</span>
-                          <span className="text-white font-bold">Corn</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-400">Moisture level:</span>
-                          <span className="text-white font-bold">15%</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-400">Temperature:</span>
-                          <span className="text-white font-bold">68°F</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-400">Grain Quality:</span>
-                          <span className="text-white font-bold">97%</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-400">Bin Capacity:</span>
-                          <span className="text-white font-bold">75%</span>
-                        </div>
+                {/* Right side - Metrics + Parts Tracking (5 cols) */}
+                <div className="col-span-5 space-y-3">
+                  {/* Grain Metrics */}
+                  <div className="bg-raptor-lightgray rounded-lg p-3">
+                    <h4 className="text-white font-bold text-sm mb-2">Grain Metrics</h4>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Grain Type:</span>
+                        <span className="text-white font-bold">Corn</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Moisture level:</span>
+                        <span className="text-white font-bold">15%</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Temperature:</span>
+                        <span className="text-white font-bold">68°F</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Grain Quality:</span>
+                        <span className="text-white font-bold">97%</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Bin Capacity:</span>
+                        <span className="text-white font-bold">75%</span>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Flow & Volume Metrics */}
-                    <div className="bg-raptor-lightgray rounded-lg p-3">
-                      <h4 className="text-white font-bold text-sm mb-2">Flow & Volume Metrics</h4>
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-400">Current Flow Rate:</span>
-                          <span className="text-white font-bold">0 bu/hr</span>
+                  {/* Flow & Volume Metrics */}
+                  <div className="bg-raptor-lightgray rounded-lg p-3">
+                    <h4 className="text-white font-bold text-sm mb-2">Flow & Volume Metrics</h4>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Current Flow Rate:</span>
+                        <span className="text-white font-bold">0 bu/hr</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Target Flow Rate:</span>
+                        <span className="text-white font-bold">1,200 bu/hr</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Volume Processed:</span>
+                        <span className="text-white font-bold">24,500 bu</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Total Capacity:</span>
+                        <span className="text-white font-bold">35,000 bu</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Flow Efficiency:</span>
+                        <span className="text-white font-bold">0%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Parts Lifespan Tracking - ON THE RIGHT per design */}
+                  <div className="bg-raptor-lightgray rounded-lg p-3">
+                    <h4 className="text-white font-bold text-sm mb-3">Parts Lifespan Tracking</h4>
+                    <div className="space-y-2.5">
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-white text-xs">Motor Drive #1</span>
+                          <div className="text-right">
+                            <span className="text-white font-bold text-xs">240h left</span>
+                            <div className="text-[10px] text-slate-400">130°F, 112 RPM</div>
+                          </div>
                         </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-400">Target Flow Rate:</span>
-                          <span className="text-white font-bold">1,200 bu/hr</span>
+                        <div className="w-full bg-slate-700 rounded-full h-2">
+                          <div className="bg-green-500 h-2 rounded-full" style={{ width: "65%" }} />
                         </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-400">Volume Processed:</span>
-                          <span className="text-white font-bold">24,500 bu</span>
+                      </div>
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-white text-xs">Motor Drive #2</span>
+                          <div className="text-right">
+                            <span className="text-white font-bold text-xs">231h left</span>
+                            <div className="text-[10px] text-slate-400">127°F, 104 RPM</div>
+                          </div>
                         </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-400">Total Capacity:</span>
-                          <span className="text-white font-bold">35,000 bu</span>
+                        <div className="w-full bg-slate-700 rounded-full h-2">
+                          <div className="bg-green-500 h-2 rounded-full" style={{ width: "62%" }} />
                         </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-400">Flow Efficiency:</span>
-                          <span className="text-white font-bold">0%</span>
+                      </div>
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-white text-xs">Paddle Chain</span>
+                          <div className="text-right">
+                            <span className="text-white font-bold text-xs">265h left</span>
+                            <div className="text-[10px] text-slate-400">2.1mm/s vibration</div>
+                          </div>
+                        </div>
+                        <div className="w-full bg-slate-700 rounded-full h-2">
+                          <div className="bg-green-500 h-2 rounded-full" style={{ width: "70%" }} />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-white text-xs">Chain Drive</span>
+                          <div className="text-right">
+                            <span className="text-white font-bold text-xs">254h left</span>
+                            <div className="text-[10px] text-slate-400">94% efficiency</div>
+                          </div>
+                        </div>
+                        <div className="w-full bg-slate-700 rounded-full h-2">
+                          <div className="bg-green-500 h-2 rounded-full" style={{ width: "68%" }} />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-white text-xs">Bearing</span>
+                          <div className="text-right">
+                            <span className="text-raptor-yellow font-bold text-xs">38h left</span>
+                            <div className="text-[10px] text-raptor-yellow">High wear detected</div>
+                          </div>
+                        </div>
+                        <div className="w-full bg-slate-700 rounded-full h-2">
+                          <div className="bg-raptor-yellow h-2 rounded-full" style={{ width: "15%" }} />
                         </div>
                       </div>
                     </div>
@@ -913,6 +977,9 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
               <div className="lg:hidden space-y-3">
                 {/* Sweep Image */}
                 <div className="relative flex justify-center items-center bg-raptor-dark/30 rounded-lg py-4">
+                  <div className="absolute top-2 right-2 bg-green-500 px-2 py-1 rounded text-xs text-white font-bold">
+                    FRONT
+                  </div>
                   {isRunning ? (
                     <video
                       autoPlay
@@ -998,157 +1065,61 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
             </CardContent>
           </Card>
 
-          {/* Motor Drive #1 Detail Card */}
-          <Card className="bg-raptor-lightgray border-slate-600">
-            <CardHeader className="pb-1">
-              <CardTitle className="text-white text-sm">
-                Motor Drive #1
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Temperature:</span>
-                    <span className="text-white">130°F</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Efficiency:</span>
-                    <span className="text-white">78%</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Vibration:</span>
-                    <span className="text-white">8.2 mm/s</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Last Service:</span>
-                    <span className="text-white">6-10-2024</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Status:</span>
-                    <span className="text-red-400 font-bold">LOCKED</span>
-                  </div>
+          {/* Motor Drive #1 Detail Section - Image left, Stats right */}
+          <div className="flex flex-col sm:flex-row gap-4 items-stretch">
+            {/* Motor Image */}
+            <div className="sm:w-1/3 flex items-center justify-center bg-raptor-gray rounded-lg p-4">
+              {isRunning ? (
+                <video
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  preload="auto"
+                  className="max-h-[160px] object-contain pointer-events-none"
+                >
+                  <source src="/close-wheel.webm" type="video/webm" />
+                  <source src="/close-wheel.mov" type="video/quicktime" />
+                </video>
+              ) : (
+                <Image
+                  src="/sweep_motor.png"
+                  alt="Motor stopped"
+                  width={200}
+                  height={160}
+                  className="max-h-[160px] object-contain"
+                />
+              )}
+            </div>
+            {/* Motor Stats */}
+            <div className="sm:w-2/3 bg-raptor-gray rounded-lg p-4">
+              <h4 className="text-white font-bold text-base mb-3">Motor Drive #1</h4>
+              <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Temperature:</span>
+                  <span className="text-white font-bold">130°F</span>
                 </div>
-                <div className="flex items-center justify-center">
-                  {isRunning ? (
-                    <video
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      preload="auto"
-                      className="max-h-[120px] object-contain pointer-events-none"
-                    >
-                      <source src="/close-wheel.webm" type="video/webm" />
-                      <source src="/close-wheel.mov" type="video/quicktime" />
-                    </video>
-                  ) : (
-                    <Image
-                      src="/sweep_motor.png"
-                      alt="Motor stopped"
-                      width={200}
-                      height={120}
-                      className="max-h-[120px] object-contain"
-                    />
-                  )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Vibration:</span>
+                  <span className="text-white font-bold">8.2 mm/s</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Efficiency:</span>
+                  <span className="text-white font-bold">78%</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Last Service:</span>
+                  <span className="text-white font-bold">6-10-2024</span>
+                </div>
+                <div className="flex justify-between text-sm col-span-2">
+                  <span className="text-slate-400">Status:</span>
+                  <span className="text-red-400 font-bold">LOCKED</span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card className="bg-raptor-gray border-slate-700">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-white text-base">
-                Parts Lifespan Tracking
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-300 text-xs">Motor Drive #1</span>
-                  <div className="text-right">
-                    <div className="text-white font-bold text-xs">240h left</div>
-                    <div className="text-xs text-slate-400">130°F, 112 RPM</div>
-                  </div>
-                </div>
-                <div className="w-full bg-slate-700 rounded-full h-1.5">
-                  <div
-                    className="bg-green-500 h-1.5 rounded-full"
-                    style={{ width: "65%" }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-300 text-xs">Motor Drive #2</span>
-                  <div className="text-right">
-                    <div className="text-white font-bold text-xs">231h left</div>
-                    <div className="text-xs text-slate-400">127°F, 104 RPM</div>
-                  </div>
-                </div>
-                <div className="w-full bg-slate-700 rounded-full h-1.5">
-                  <div
-                    className="bg-green-500 h-1.5 rounded-full"
-                    style={{ width: "62%" }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-300 text-xs">Paddle Chain</span>
-                  <div className="text-right">
-                    <div className="text-white font-bold text-xs">265h left</div>
-                    <div className="text-xs text-slate-400">21mm/s vibration</div>
-                  </div>
-                </div>
-                <div className="w-full bg-slate-700 rounded-full h-1.5">
-                  <div
-                    className="bg-green-500 h-1.5 rounded-full"
-                    style={{ width: "70%" }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-300 text-xs">Chain Drive</span>
-                  <div className="text-right">
-                    <div className="text-white font-bold text-xs">254h left</div>
-                    <div className="text-xs text-slate-400">94% efficiency</div>
-                  </div>
-                </div>
-                <div className="w-full bg-slate-700 rounded-full h-1.5">
-                  <div
-                    className="bg-green-500 h-1.5 rounded-full"
-                    style={{ width: "68%" }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-300 text-xs">Bearing</span>
-                  <div className="text-right">
-                    <div className="text-raptor-yellow font-bold text-xs">
-                      38h left
-                    </div>
-                    <div className="text-xs text-raptor-yellow">
-                      High wear detected
-                    </div>
-                  </div>
-                </div>
-                <div className="w-full bg-slate-700 rounded-full h-1.5">
-                  <div
-                    className="bg-raptor-yellow h-1.5 rounded-full"
-                    style={{ width: "15%" }}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
+          {/* Bottom Row: Active Programs | AI Insights | Quick Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Active Programs */}
             <Card className="bg-raptor-gray border-slate-700">
@@ -1158,9 +1129,9 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <div className="bg-red-900/30 border border-red-700 rounded-lg p-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-white font-medium text-xs">
+                <div className="bg-raptor-lightgray rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-white font-medium text-sm">
                       Temperature Control Protocol
                     </span>
                     <Switch
@@ -1173,9 +1144,9 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                   </Badge>
                 </div>
 
-                <div className="bg-red-900/30 border border-red-700 rounded-lg p-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-white font-medium text-xs">
+                <div className="bg-raptor-lightgray rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-white font-medium text-sm">
                       High Load Protection
                     </span>
                     <Switch
@@ -1198,10 +1169,10 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <div className="bg-raptor-lightgray rounded-lg p-2">
-                  <div className="flex items-start justify-between mb-1">
+                <div className="bg-raptor-lightgray rounded-lg p-3">
+                  <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
-                      <div className="text-white font-medium text-xs mb-0.5">
+                      <div className="text-white font-medium text-sm mb-0.5">
                         Bearing Wear Alert
                       </div>
                       <div className="text-xs text-slate-400">
@@ -1212,15 +1183,15 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                       CRITICAL
                     </Badge>
                   </div>
-                  <Button className="w-full bg-pink-500 hover:bg-pink-600 text-white text-xs h-7 mt-1">
+                  <Button className="w-full bg-pink-500 hover:bg-pink-600 text-white text-sm h-8">
                     Schedule Maintenance
                   </Button>
                 </div>
 
-                <div className="bg-raptor-lightgray rounded-lg p-2">
-                  <div className="flex items-start justify-between mb-1">
+                <div className="bg-raptor-lightgray rounded-lg p-3">
+                  <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
-                      <div className="text-white font-medium text-xs mb-0.5">
+                      <div className="text-white font-medium text-sm mb-0.5">
                         Efficiency Optimization
                       </div>
                       <div className="text-xs text-slate-400">
@@ -1231,7 +1202,7 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                       MEDIUM
                     </Badge>
                   </div>
-                  <Button className="w-full bg-raptor-yellow hover:bg-yellow-500 text-black text-xs h-7 mt-1">
+                  <Button className="w-full bg-raptor-yellow hover:bg-yellow-500 text-black text-sm h-8">
                     Schedule Maintenance
                   </Button>
                 </div>
@@ -1246,15 +1217,15 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-start h-9 text-sm">
+                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white h-10">
                   <History className="w-4 h-4 mr-2" />
                   Maintenance History
                 </Button>
-                <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white justify-start h-9 text-sm">
+                <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white h-10">
                   <AlertCircle className="w-4 h-4 mr-2" />
                   Errors & Logs
                 </Button>
-                <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white justify-start h-9 text-sm">
+                <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white h-10">
                   <Headphones className="w-4 h-4 mr-2" />
                   Remote Support
                 </Button>
