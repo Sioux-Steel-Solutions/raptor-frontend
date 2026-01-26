@@ -147,7 +147,7 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
   const [operatingHours, setOperatingHours] = useState(1247.5);
 
   // Toggle between sweep position dial and camera feed
-  const [showCameraFeed, setShowCameraFeed] = useState(false);
+  const [showCameraFeed, setShowCameraFeed] = useState(true);
 
   // Per-VFD telemetry (NEW - replaces fake temperature/humidity/chainRpm)
   const [chainTelemetry, setChainTelemetry] = useState<VFDTelemetry | null>(null);
@@ -653,14 +653,14 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
               <CardContent className="flex flex-col items-center py-4">
                 {showCameraFeed ? (
                   <>
-                    <div className="relative w-40 h-40 sm:w-52 sm:h-52 mb-4 overflow-hidden rounded-lg">
+                    <div className="relative w-full aspect-video mb-4 overflow-hidden rounded-lg bg-black">
                       <img
                         src="https://ptz-camera.tailc61a08.ts.net/?action=stream"
                         alt="PTZ Camera Feed"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     </div>
-                    <div className="bg-raptor-lightgray rounded-lg px-4 py-3 w-full max-w-[240px]">
+                    <div className="bg-raptor-lightgray rounded-lg px-4 py-3 w-full">
                       <div className="flex justify-between items-center gap-4">
                         <div className="text-center">
                           <div className="text-sm font-bold text-white">
