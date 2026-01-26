@@ -149,6 +149,19 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
   // Toggle between sweep position dial and camera feed
   const [showCameraFeed, setShowCameraFeed] = useState(true);
 
+  // Camera stream fallback - use snapshot refresh if stream fails
+  const [streamFailed, setStreamFailed] = useState(false);
+  const [snapshotKey, setSnapshotKey] = useState(0);
+
+  // Auto-refresh snapshot every 500ms if stream failed
+  useEffect(() => {
+    if (!streamFailed || !showCameraFeed) return;
+    const interval = setInterval(() => {
+      setSnapshotKey(k => k + 1);
+    }, 500);
+    return () => clearInterval(interval);
+  }, [streamFailed, showCameraFeed]);
+
   // Per-VFD telemetry (NEW - replaces fake temperature/humidity/chainRpm)
   const [chainTelemetry, setChainTelemetry] = useState<VFDTelemetry | null>(null);
   const [innerWheelTelemetry, setInnerWheelTelemetry] = useState<VFDTelemetry | null>(null);
@@ -654,15 +667,31 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                 {showCameraFeed ? (
                   <>
                     <div className="relative w-full aspect-video mb-4 overflow-hidden rounded-lg bg-black">
-                      <img
-                        src="https://ptz-camera.tailc61a08.ts.net/?action=stream"
-                        alt="PTZ Camera Feed"
-                        className="w-full h-full object-contain"
-                        loading="eager"
-                        decoding="async"
-                        // @ts-expect-error - fetchpriority is valid but not in React types
-                        fetchpriority="high"
-                      />
+                      {streamFailed ? (
+                        // Fallback: refresh snapshots every 500ms
+                        <img
+                          key={snapshotKey}
+                          src={`https://ptz-camera.tailc61a08.ts.net/?action=snapshot&t=${snapshotKey}`}
+                          alt="PTZ Camera Feed (Snapshot Mode)"
+                          className="w-full h-full object-contain"
+                          loading="eager"
+                        />
+                      ) : (
+                        // Primary: MJPEG stream
+                        <img
+                          src="https://ptz-camera.tailc61a08.ts.net/?action=stream"
+                          alt="PTZ Camera Feed"
+                          className="w-full h-full object-contain"
+                          loading="eager"
+                          decoding="async"
+                          onError={() => {
+                            console.log("[Camera] Stream failed, falling back to snapshots");
+                            setStreamFailed(true);
+                          }}
+                          // @ts-expect-error - fetchpriority is valid but not in React types
+                          fetchpriority="high"
+                        />
+                      )}
                     </div>
                     <div className="bg-raptor-lightgray rounded-lg px-4 py-3 w-full">
                       <div className="flex justify-between items-center gap-4">
@@ -671,12 +700,14 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                             Live Feed
                           </div>
                           <div className="text-xs text-slate-400">
-                            PTZ CAMERA
+                            {streamFailed ? "SNAPSHOT MODE" : "PTZ CAMERA"}
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                          <span className="text-xs text-green-400">LIVE</span>
+                          <div className={`w-2 h-2 rounded-full animate-pulse ${streamFailed ? "bg-yellow-500" : "bg-green-500"}`} />
+                          <span className={`text-xs ${streamFailed ? "text-yellow-400" : "text-green-400"}`}>
+                            {streamFailed ? "FALLBACK" : "LIVE"}
+                          </span>
                         </div>
                       </div>
                     </div>
