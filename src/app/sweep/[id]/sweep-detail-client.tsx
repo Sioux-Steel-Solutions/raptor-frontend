@@ -658,6 +658,10 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                         src="https://ptz-camera.tailc61a08.ts.net/?action=stream"
                         alt="PTZ Camera Feed"
                         className="w-full h-full object-contain"
+                        loading="eager"
+                        decoding="async"
+                        // @ts-expect-error - fetchpriority is valid but not in React types
+                        fetchpriority="high"
                       />
                     </div>
                     <div className="bg-raptor-lightgray rounded-lg px-4 py-3 w-full">

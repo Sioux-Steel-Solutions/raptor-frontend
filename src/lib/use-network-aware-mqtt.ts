@@ -128,9 +128,11 @@ export function useNetworkAwareMqtt(options: NetworkAwareMqttOptions = {}) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const options: any = {
-      reconnectPeriod: 5000,
-      connectTimeout: 30000,
-      keepalive: 30,
+      reconnectPeriod: 2000,      // Reconnect faster (2s instead of 5s)
+      connectTimeout: 10000,      // Shorter timeout (10s instead of 30s)
+      keepalive: 15,              // More frequent keepalive (15s instead of 30s)
+      clean: true,                // Clean session on reconnect
+      resubscribe: true,          // Auto-resubscribe on reconnect
       // Custom WebSocket factory to force 'mqtt' protocol only
       // mqtt.js defaults to ['mqtt', 'mqttv3.1'] which Mosquitto may reject
       createWebsocket: (wsUrl: string) => {
@@ -177,12 +179,17 @@ export function useNetworkAwareMqtt(options: NetworkAwareMqttOptions = {}) {
       onDisconnectRef.current?.();
     });
 
+    client.on("reconnect", () => {
+      console.log(`[MQTT] Reconnecting to ${mode} broker...`);
+    });
+
     client.on("error", (err) => {
       console.error(`[MQTT] Error:`, err.message || err);
+      // Don't end client on error - let it auto-reconnect
     });
 
     client.on("offline", () => {
-      console.log(`[MQTT] Broker ${mode} went offline`);
+      console.log(`[MQTT] Broker ${mode} went offline, will auto-reconnect`);
     });
 
     return client;
