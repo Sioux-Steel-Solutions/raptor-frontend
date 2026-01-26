@@ -993,9 +993,9 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                   </div>
 
                   {/* Selected Component Detail - Inside left column, below diagram */}
-                  <div className={`flex gap-3 bg-raptor-lightgray rounded-lg p-3 border-2 ${componentDetails[selectedComponent].borderColor}`}>
-                    {/* Component Image */}
-                    <div className="w-1/3 flex items-center justify-center">
+                  <div className={`flex gap-4 bg-raptor-lightgray rounded-lg p-4 border-2 min-h-[200px] ${componentDetails[selectedComponent].borderColor}`}>
+                    {/* Component Image - Larger */}
+                    <div className="w-1/2 flex items-center justify-center bg-raptor-dark/30 rounded-lg p-2">
                       {isRunning ? (
                         <video
                           autoPlay
@@ -1003,7 +1003,7 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                           muted
                           playsInline
                           preload="auto"
-                          className="max-h-[120px] object-contain pointer-events-none"
+                          className="h-[180px] w-auto object-contain pointer-events-none"
                         >
                           <source src="/close-wheel.webm" type="video/webm" />
                           <source src="/close-wheel.mov" type="video/quicktime" />
@@ -1012,37 +1012,39 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                         <Image
                           src="/sweep_motor.png"
                           alt={`${componentDetails[selectedComponent].name}`}
-                          width={150}
-                          height={120}
-                          className="max-h-[120px] object-contain"
+                          width={250}
+                          height={180}
+                          className="h-[180px] w-auto object-contain"
                         />
                       )}
                     </div>
-                    {/* Component Stats */}
-                    <div className="w-2/3">
-                      <h4 className="text-white font-bold text-sm mb-2">{componentDetails[selectedComponent].name}</h4>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Temperature:</span>
-                          <span className="text-white font-bold">{componentDetails[selectedComponent].temperature}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Vibration:</span>
-                          <span className="text-white font-bold">{componentDetails[selectedComponent].vibration}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Efficiency:</span>
-                          <span className="text-white font-bold">{componentDetails[selectedComponent].efficiency}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Last Service:</span>
-                          <span className="text-white font-bold">{componentDetails[selectedComponent].lastService}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Status:</span>
-                          <span className={`font-bold ${componentDetails[selectedComponent].statusColor}`}>
-                            {componentDetails[selectedComponent].status}
-                          </span>
+                    {/* Component Stats - Stacked vertically */}
+                    <div className="w-1/2 flex flex-col justify-between">
+                      <div>
+                        <h4 className="text-white font-bold text-base mb-3">{componentDetails[selectedComponent].name}</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Temperature:</span>
+                            <span className="text-white font-bold">{componentDetails[selectedComponent].temperature}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Efficiency:</span>
+                            <span className="text-white font-bold">{componentDetails[selectedComponent].efficiency}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Vibration:</span>
+                            <span className="text-white font-bold">{componentDetails[selectedComponent].vibration}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Last Service:</span>
+                            <span className="text-white font-bold">{componentDetails[selectedComponent].lastService}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Status:</span>
+                            <span className={`font-bold ${componentDetails[selectedComponent].statusColor}`}>
+                              {componentDetails[selectedComponent].status}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
