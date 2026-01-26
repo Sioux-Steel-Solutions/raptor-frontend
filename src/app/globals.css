@@ -120,6 +120,9 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    background-color: #0b101c; /* raptor-dark - prevents white flash on overscroll */
+  }
   body {
     @apply bg-background text-foreground;
   }

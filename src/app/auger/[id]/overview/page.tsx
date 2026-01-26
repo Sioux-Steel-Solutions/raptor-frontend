@@ -1,7 +1,8 @@
 // Server component for system overview page
 // Exports generateStaticParams for static export
+// Now uses the combined AugerDetailClient with overview tab as default
 import { getAugerStaticParams } from "@/lib/static-params";
-import { SystemOverviewClient } from "./overview-client";
+import { AugerDetailClient } from "../auger-detail-client";
 
 // Generate static params for all auger IDs (required for static export)
 export function generateStaticParams() {
@@ -14,5 +15,5 @@ interface PageProps {
 
 export default async function SystemOverviewPage({ params }: PageProps) {
   const { id } = await params;
-  return <SystemOverviewClient id={id} />;
+  return <AugerDetailClient id={id} defaultTab="overview" />;
 }

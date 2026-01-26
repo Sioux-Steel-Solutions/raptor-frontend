@@ -364,7 +364,9 @@ export function transformTelemetryForChart(
         bushelsPerHour: estimateBushelsPerHour(chainRpm, chainAmps),
         // Check both paddle_running and wheels_running
         isRunning: record.data.sweep_running ?? record.data.paddle_running ?? record.data.wheels_running ?? false,
-        direction: record.data.wheel_direction ?? "unknown",
+        direction: (record.data.wheel_direction === "fwd" || record.data.wheel_direction === "rev"
+          ? record.data.wheel_direction
+          : "unknown") as "fwd" | "rev" | "unknown",
       };
     })
     .sort((a, b) => a.timestamp - b.timestamp);

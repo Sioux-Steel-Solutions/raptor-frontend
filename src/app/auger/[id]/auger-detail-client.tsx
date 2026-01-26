@@ -3,11 +3,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Play,
   Square,
@@ -16,8 +18,12 @@ import {
   RotateCw,
   ArrowLeft,
   Zap,
-  BarChart2,
   ArrowRightLeft,
+  Bell,
+  Lock,
+  History,
+  AlertCircle,
+  Headphones,
 } from "lucide-react";
 // ⬇️ Changed: make LayoutWrapper client-only to prevent SSR hydration mismatch
 const LayoutWrapper = dynamic(
@@ -31,6 +37,7 @@ import { useNetworkAwareMqtt } from "@/lib/use-network-aware-mqtt";
 
 interface AugerDetailProps {
   id: string;
+  defaultTab?: "controls" | "overview";
 }
 
 // Per-VFD telemetry from raptor-core
@@ -42,12 +49,16 @@ interface VFDTelemetry {
   drive_state: number;
 }
 
-export function AugerDetailClient({ id }: AugerDetailProps) {
+export function AugerDetailClient({ id, defaultTab = "controls" }: AugerDetailProps) {
+  // Tab state for Controls vs Overview
+  const [activeTab, setActiveTab] = useState<"controls" | "overview">(defaultTab);
+
+  // Overview-specific state
+  const [tempControlActive, setTempControlActive] = useState(false);
+  const [highLoadActive, setHighLoadActive] = useState(false);
 
   const [isRunning, setIsRunning] = useState(false);
   const [augerPosition, setAugerPosition] = useState(0);
-  const [targetThroughput, setTargetThroughput] = useState([5000]);
-  const [currentThroughput, setCurrentThroughput] = useState(0);
   const [operatingHours, setOperatingHours] = useState(1247.5);
 
   // Per-VFD telemetry (NEW - replaces fake temperature/humidity/chainRpm)
@@ -159,9 +170,6 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
     if (auger) {
       setAugerPosition(auger.position);
       setAngleRaw(auger.position); // seed the continuous angle from initial position
-      setCurrentThroughput(auger.throughput);
-      setTargetThroughput([auger.targetThroughput]);
-      // Note: temperature/humidity removed - now using real VFD telemetry
       setIsRunning(auger.isRunning);
     }
   }, [auger]);
@@ -288,28 +296,19 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
     setAugerPosition(normalized);
   }, [angleRaw]);
 
-  // metrics update loop (unchanged except we no longer bump augerPosition here)
+  // operating hours update loop
   useEffect(() => {
     if (isRunning) {
       intervalRef.current = setInterval(() => {
-        // ❌ removed: setAugerPosition((prev) => (prev + 2) % 360);
-
-        setCurrentThroughput((prev) => {
-          const target = targetThroughput[0];
-          const diff = target - prev;
-          return prev + diff * 0.1 + (Math.random() - 0.5) * 2;
-        });
-        // Note: temperature/humidity/chainRpm simulation removed - now using real VFD telemetry
         setOperatingHours((prev) => prev + 0.001);
       }, 100);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      setCurrentThroughput(0);
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isRunning, targetThroughput, currentThroughput]);
+  }, [isRunning]);
 
   // manual buttons now publish commands (optimistic UI; broker state will overwrite on next message)
   const handleStart = () => {
@@ -320,17 +319,11 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
   };
 
   const getStatusColor = () => {
-    if (!isRunning) return "bg-gray-500";
-    return Math.abs(currentThroughput - targetThroughput[0]) > 10
-      ? "bg-raptor-yellow"
-      : "bg-green-500";
+    return isRunning ? "bg-green-500" : "bg-gray-500";
   };
 
   const getStatusText = () => {
-    if (!isRunning) return "STOPPED";
-    return Math.abs(currentThroughput - targetThroughput[0]) > 10
-      ? "ADJUSTING"
-      : "OPTIMAL";
+    return isRunning ? "RUNNING" : "STOPPED";
   };
 
   if (!auger) {
@@ -356,43 +349,60 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
 
   return (
     <LayoutWrapper>
-      <div className="space-y-6 sm:space-y-8">
+      <div className="space-y-5">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <Link href="/dashboard">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex gap-2">
+              <Link href="/dashboard">
+                <Button
+                  variant="outline"
+                  className="bg-raptor-lightgray border-slate-600 text-white hover:bg-slate-600 h-9"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-1" />
+                  Back
+                </Button>
+              </Link>
+              {/* Tab Buttons */}
               <Button
-                variant="outline"
-                className="bg-raptor-lightgray border-slate-600 text-white hover:bg-slate-600"
+                onClick={() => setActiveTab("controls")}
+                className={`h-9 ${
+                  activeTab === "controls"
+                    ? "bg-orange-600 hover:bg-orange-700 text-white"
+                    : "bg-raptor-lightgray border-slate-600 text-white hover:bg-slate-600"
+                }`}
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
+                Controls
               </Button>
-            </Link>
-            <Link href={`/auger/${id}/overview`}>
-              <Button className="bg-orange-600 hover:bg-orange-700 text-white">
-                <BarChart2 className="w-4 h-4 mr-2" />
+              <Button
+                onClick={() => setActiveTab("overview")}
+                className={`h-9 ${
+                  activeTab === "overview"
+                    ? "bg-orange-600 hover:bg-orange-700 text-white"
+                    : "bg-raptor-lightgray border-slate-600 text-white hover:bg-slate-600"
+                }`}
+              >
                 Overview
               </Button>
-            </Link>
+            </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-yellow-400">
+              <h1 className="text-xl sm:text-2xl font-bold text-yellow-400">
                 {auger.name}
               </h1>
-              <p className="text-slate-400 text-sm sm:text-base">
-                System ID: {id} | {auger.zone}
+              <p className="text-slate-400 text-sm">
+                {id} | {auger.zone}
               </p>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-4">
             <Badge
               variant="outline"
-              className={`${getStatusColor()} text-white border-0 px-4 py-2`}
+              className={`${getStatusColor()} text-white border-0 px-4 py-1.5`}
             >
               {getStatusText()}
             </Badge>
-            <div className="text-left sm:text-right text-slate-300">
-              <div className="text-sm">Operating Hours</div>
+            <div className="text-right text-slate-300">
+              <div className="text-xs text-slate-400">Operating Hours</div>
               <div className="text-xl font-mono">
                 {operatingHours.toFixed(1)}
               </div>
@@ -400,21 +410,23 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
-          {/* Controls & Throughput */}
-          <Card className="bg-raptor-gray border-slate-700 xl:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2 text-lg">
+        {/* Controls Tab */}
+        {activeTab === "controls" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* Controls */}
+          <Card className="bg-raptor-gray border-slate-700 lg:col-span-2">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-white flex items-center gap-2">
                 <Gauge className="w-5 h-5" />
                 System Controls
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+            <CardContent className="space-y-4 pt-0">
+              <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                 <Button
                   onClick={handleStart}
                   disabled={isRunning}
-                  className="flex-1 bg-green-600 hover:bg-green-700 px-8 py-3 text-lg text-white h-14"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-lg text-white h-14"
                 >
                   <Play className="w-5 h-5 mr-2" />
                   START
@@ -422,79 +434,49 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
                 <Button
                   onClick={handleStop}
                   disabled={!isRunning}
-                  className="flex-1 bg-red-600 hover:bg-red-700 px-8 py-3 text-lg text-white h-14"
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-lg text-white h-14"
                 >
                   <Square className="w-5 h-5 mr-2" />
                   STOP
                 </Button>
+                {/* Direction Toggle */}
                 <Button
-                  onClick={() => setAugerPosition(0)}
-                  className="flex-1 bg-raptor-lightgray hover:bg-blue-300 px-8 py-3 text-lg text-white h-14"
+                  onClick={() => publishDirection(wheelDirection === "fwd" ? "rev" : "fwd")}
+                  className={`flex-1 text-lg text-white h-14 ${
+                    wheelDirection === "fwd" ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"
+                  }`}
                 >
-                  <RotateCw className="w-5 h-5" />
-                  RESET
+                  <ArrowRightLeft className="w-5 h-5 mr-2" />
+                  {wheelDirection === "fwd" ? "FWD" : "REV"}
                 </Button>
               </div>
 
-              {/* Direction Control */}
-              <div className="bg-raptor-lightgray rounded-lg p-3 sm:p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <ArrowRightLeft className="w-5 h-5 text-orange-400" />
-                    <span className="text-white font-medium">Wheel Direction</span>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={`${wheelDirection === "fwd" ? "bg-green-600" : "bg-blue-600"} text-white border-0 px-3 py-1`}
-                  >
-                    {wheelDirection === "fwd" ? "FORWARD" : "REVERSE"}
-                  </Badge>
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    onClick={() => publishDirection("fwd")}
-                    disabled={wheelDirection === "fwd"}
-                    className={`flex-1 h-12 text-white ${
-                      wheelDirection === "fwd"
-                        ? "bg-green-600 cursor-default"
-                        : "bg-slate-600 hover:bg-green-600"
-                    }`}
-                  >
-                    <RotateCw className="w-4 h-4 mr-2" />
-                    FORWARD (CW)
-                  </Button>
-                  <Button
-                    onClick={() => publishDirection("rev")}
-                    disabled={wheelDirection === "rev"}
-                    className={`flex-1 h-12 text-white ${
-                      wheelDirection === "rev"
-                        ? "bg-blue-600 cursor-default"
-                        : "bg-slate-600 hover:bg-blue-600"
-                    }`}
-                  >
-                    <RotateCw className="w-4 h-4 mr-2 scale-x-[-1]" />
-                    REVERSE (CCW)
-                  </Button>
-                </div>
-                {/* Direction Warning Banner */}
-                {directionWarning && (
-                  <div className="mt-3 p-3 bg-red-900/50 border border-red-500 rounded-lg flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
+              {/* Direction Warning Banner - fixed height to prevent layout shift */}
+              <div className={`p-2.5 rounded-lg flex items-center gap-2 transition-colors min-h-[40px] ${
+                directionWarning
+                  ? "bg-red-900/50 border border-red-500"
+                  : "bg-transparent border border-transparent"
+              }`}>
+                {directionWarning ? (
+                  <>
+                    <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
                     <span className="text-red-200 text-sm">{directionWarning}</span>
-                  </div>
+                  </>
+                ) : (
+                  <span className="text-transparent text-sm select-none">&nbsp;</span>
                 )}
               </div>
 
               {/* Wheel Speed Control */}
-              <div className="bg-raptor-lightgray rounded-lg p-3 sm:p-4">
-                <div className="flex items-center justify-between mb-3">
+              <div className="bg-raptor-lightgray rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Gauge className="w-5 h-5 text-blue-400" />
-                    <span className="text-white font-medium">Wheel Speed</span>
+                    <Gauge className="w-4 h-4 text-blue-400" />
+                    <span className="text-white font-medium text-sm">Wheel Speed</span>
                   </div>
                   <Badge
                     variant="outline"
-                    className="bg-blue-600 text-white border-0 px-3 py-1 font-mono"
+                    className="bg-blue-600 text-white border-0 px-2.5 py-0.5 font-mono text-sm"
                   >
                     {wheelSpeed}
                   </Badge>
@@ -511,79 +493,31 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
                   max={1500}
                   step={50}
                 />
-                <div className="flex justify-between text-xs text-slate-400 mt-2">
-                  <span>100 (Slow)</span>
+                <div className="flex justify-between text-xs text-slate-400 mt-1.5">
+                  <span>100</span>
                   <span>800</span>
-                  <span>1500 (Fast)</span>
-                </div>
-                <div className="text-xs text-slate-500 mt-2">
-                  Inner wheel: {wheelSpeedSlider[0]} | Outer wheel: {Math.round(wheelSpeedSlider[0] * 0.9167)}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-white font-medium text-sm sm:text-base">
-                    Target Throughput
-                  </span>
-                  <span className="text-orange-400 font-mono text-sm sm:text-base">
-                    {targetThroughput[0]} Bu/hr
-                  </span>
-                </div>
-                <Slider
-                  value={targetThroughput}
-                  onValueChange={setTargetThroughput}
-                  min={0}
-                  max={10000}
-                  step={50}
-                />
-                <div className="flex justify-between text-xs text-slate-400">
-                  <span>0</span>
-                  <span>5K</span>
-                  <span>10K</span>
-                </div>
-              </div>
-
-              <div className="bg-raptor-lightgray rounded-lg p-3 sm:p-4 space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-300 text-sm sm:text-base">
-                    Current Throughput
-                  </span>
-                  <span className="text-xl sm:text-2xl font-mono text-white">
-                    {currentThroughput.toFixed(1)} Bu/hr
-                  </span>
-                </div>
-                <div className="w-full bg-slate-800 rounded-full h-2">
-                  <div
-                    className="bg-raptor-yellow h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        (currentThroughput / 10000) * 100
-                      )}%`,
-                    }}
-                  />
+                  <span>1500</span>
                 </div>
               </div>
 
               {/* Chain Speed Control */}
-              <div className="bg-raptor-lightgray rounded-lg p-3 sm:p-4">
-                <div className="flex items-center justify-between mb-3">
+              <div className="bg-raptor-lightgray rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Gauge className="w-5 h-5 text-orange-400" />
-                    <span className="text-white font-medium">Chain Speed</span>
+                    <Gauge className="w-4 h-4 text-orange-400" />
+                    <span className="text-white font-medium text-sm">Chain Speed</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge
                       variant="outline"
-                      className="bg-orange-600 text-white border-0 px-3 py-1 font-mono"
+                      className="bg-orange-600 text-white border-0 px-2.5 py-0.5 font-mono text-sm"
                     >
                       {chainSpeed}
                     </Badge>
                     {chainTelemetry?.drive_state === 1 && (
                       <span className="text-green-400 flex items-center gap-1 text-xs">
                         <RotateCw className="w-3 h-3 animate-spin" />
-                        {chainTelemetry?.actual_rpm ?? 0} RPM
+                        {chainTelemetry?.actual_rpm ?? 0}
                       </span>
                     )}
                   </div>
@@ -600,42 +534,39 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
                   max={1200}
                   step={50}
                 />
-                <div className="flex justify-between text-xs text-slate-400 mt-2">
-                  <span>100 (Slow)</span>
+                <div className="flex justify-between text-xs text-slate-400 mt-1.5">
+                  <span>100</span>
                   <span>650</span>
-                  <span>1200 (Fast)</span>
-                </div>
-                <div className="text-xs text-slate-500 mt-2">
-                  Actual: {chainTelemetry?.actual_rpm ?? 0} RPM | Target: {chainTelemetry?.target_rpm ?? 0} RPM
+                  <span>1200</span>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 xl:grid-cols-1 items-start gap-6 sm:gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-1 items-start gap-5">
             {/* Auger Position */}
             <Card className="bg-raptor-gray border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2 text-lg">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white flex items-center gap-2">
                   <RotateCw className="w-5 h-5" />
                   Sweep Position
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col items-center py-6">
-                <div className="relative w-48 h-48 sm:w-60 sm:h-60 mb-6">
-                  <div className="absolute inset-4 rounded-full border-6 border-raptor-yellow bg-raptor-gray" />
+              <CardContent className="flex flex-col items-center py-4">
+                <div className="relative w-40 h-40 sm:w-52 sm:h-52 mb-4">
+                  <div className="absolute inset-3 rounded-full border-4 border-raptor-yellow bg-raptor-gray" />
                   <div className="absolute inset-0">
                     {/* markers at 0, 90, 180, 270 */}
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-white">
+                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-white text-sm">
                       N
                     </span>
-                    <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-white">
+                    <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-white text-sm">
                       S
                     </span>
-                    <span className="absolute top-1/2 -left-3 -translate-y-1/2 text-white">
+                    <span className="absolute top-1/2 -left-2 -translate-y-1/2 text-white text-sm">
                       W
                     </span>
-                    <span className="absolute top-1/2 -right-3 -translate-y-1/2 text-white">
+                    <span className="absolute top-1/2 -right-2 -translate-y-1/2 text-white text-sm">
                       E
                     </span>
                   </div>
@@ -643,7 +574,7 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
                     <div
                       className="absolute w-1 bg-raptor-yellow rounded-full transition-transform duration-100"
                       style={{
-                        height: "102px",
+                        height: "85px",
                         top: "50%",
                         left: "50%",
                         transform: `translate(-50%, -100%) rotate(${angleRaw}deg)`,
@@ -654,31 +585,31 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
                   <div className="absolute top-1/2 left-1/2 w-3 h-3 bg-raptor-yellow rounded-full transform -translate-x-1/2 -translate-y-1/2 border-2 border-raptor-yellow z-10" />
                 </div>
 
-                <div className="bg-raptor-lightgray rounded-lg px-4 py-3 sm:px-6 sm:py-4 w-full max-w-xs">
+                <div className="bg-raptor-lightgray rounded-lg px-4 py-3 w-full max-w-[240px]">
                   <div className="flex justify-between items-center gap-4">
-                    {/* LEFT: angle + label (centered) */}
+                    {/* LEFT: angle + label */}
                     <div className="text-center">
-                      <div className="text-2xl sm:text-3xl font-mono font-bold text-white mb-1">
+                      <div className="text-2xl font-mono font-bold text-white">
                         {augerPosition.toFixed(0)}°
                       </div>
                       <div className="text-xs text-slate-400">
-                        CURRENT POSITION
+                        POSITION
                       </div>
                     </div>
 
                     {/* RIGHT: sweep rate + direction */}
-                    <div className="flex flex-col text-xs text-slate-300 items-center">
+                    <div className="flex flex-col text-xs text-slate-300 items-center gap-1">
                       <div className="text-center">
-                        Sweep Rate
-                        <div className="font-mono text-orange-400">
-                          {isRunning ? "2.0" : "0.0"}°/sec
-                        </div>
+                        <span className="text-slate-400">Rate </span>
+                        <span className="font-mono text-orange-400">
+                          {isRunning ? "2.0" : "0.0"}°/s
+                        </span>
                       </div>
-                      <div className="mt-2 text-center">
-                        Direction
-                        <div className={`font-mono ${wheelDirection === "fwd" ? "text-green-400" : "text-blue-400"}`}>
+                      <div className="text-center">
+                        <span className="text-slate-400">Dir </span>
+                        <span className={`font-mono ${wheelDirection === "fwd" ? "text-green-400" : "text-blue-400"}`}>
                           {wheelDirection === "fwd" ? "CW" : "CCW"}
-                        </div>
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -687,102 +618,607 @@ export function AugerDetailClient({ id }: AugerDetailProps) {
             </Card>
           </div>
 
-          {/* Motor Telemetry - Real VFD Data */}
-          <Card className="bg-raptor-gray border-slate-700 xl:col-span-3">
-            <CardHeader>
-              <CardTitle className="text-white text-lg">
+          {/* Motor Telemetry */}
+          <Card className="bg-raptor-gray border-slate-700 lg:col-span-3">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white">
                 Motor Telemetry
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Chain Motor */}
-                <div className="bg-raptor-lightgray rounded-lg p-3 sm:p-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Gauge className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" />
-                    <span className="text-slate-300 font-medium text-sm sm:text-base">
-                      Chain Motor
-                    </span>
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-mono text-white">
+                <div className="bg-raptor-lightgray rounded-lg p-4 text-center relative">
+                  {chainTelemetry?.drive_state === 1 && (
+                    <RotateCw className="w-4 h-4 text-green-400 animate-spin absolute top-3 right-3" />
+                  )}
+                  <Gauge className="w-6 h-6 text-orange-400 mx-auto mb-2" />
+                  <div className="text-xs text-slate-400 mb-1">Chain Motor</div>
+                  <div className="text-2xl font-mono text-white font-bold">
                     {chainTelemetry?.amps?.toFixed(1) ?? "0.0"}A
                   </div>
-                  <div className="text-sm text-slate-400">
-                    {chainTelemetry?.actual_rpm ?? 0} RPM
-                  </div>
-                  {chainTelemetry?.drive_state === 1 && (
-                    <div className="flex items-center gap-2 text-green-400">
-                      <RotateCw className="w-4 h-4 animate-spin" />
-                      <span className="text-xs font-medium">RUNNING</span>
-                    </div>
-                  )}
+                  <div className="text-sm text-slate-400">{chainTelemetry?.actual_rpm ?? 0} rpm</div>
                 </div>
 
                 {/* Inner Wheel Motor */}
-                <div className="bg-raptor-lightgray rounded-lg p-3 sm:p-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <RotateCw className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
-                    <span className="text-slate-300 font-medium text-sm sm:text-base">
-                      Inner Wheel
-                    </span>
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-mono text-white">
+                <div className="bg-raptor-lightgray rounded-lg p-4 text-center relative">
+                  {innerWheelTelemetry?.drive_state === 1 && (
+                    <RotateCw className="w-4 h-4 text-green-400 animate-spin absolute top-3 right-3" />
+                  )}
+                  <RotateCw className="w-6 h-6 text-blue-400 mx-auto mb-2" />
+                  <div className="text-xs text-slate-400 mb-1">Inner Wheel</div>
+                  <div className="text-2xl font-mono text-white font-bold">
                     {innerWheelTelemetry?.amps?.toFixed(1) ?? "0.0"}A
                   </div>
-                  <div className="text-sm text-slate-400">
-                    {innerWheelTelemetry?.actual_rpm ?? 0} RPM
-                  </div>
-                  {innerWheelTelemetry?.drive_state === 1 && (
-                    <div className="flex items-center gap-2 text-green-400">
-                      <RotateCw className="w-4 h-4 animate-spin" />
-                      <span className="text-xs font-medium">RUNNING</span>
-                    </div>
-                  )}
+                  <div className="text-sm text-slate-400">{innerWheelTelemetry?.actual_rpm ?? 0} rpm</div>
                 </div>
 
                 {/* Outer Wheel Motor */}
-                <div className="bg-raptor-lightgray rounded-lg p-3 sm:p-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <RotateCw className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
-                    <span className="text-slate-300 font-medium text-sm sm:text-base">
-                      Outer Wheel
-                    </span>
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-mono text-white">
+                <div className="bg-raptor-lightgray rounded-lg p-4 text-center relative">
+                  {outerWheelTelemetry?.drive_state === 1 && (
+                    <RotateCw className="w-4 h-4 text-green-400 animate-spin absolute top-3 right-3" />
+                  )}
+                  <RotateCw className="w-6 h-6 text-green-400 mx-auto mb-2" />
+                  <div className="text-xs text-slate-400 mb-1">Outer Wheel</div>
+                  <div className="text-2xl font-mono text-white font-bold">
                     {outerWheelTelemetry?.amps?.toFixed(1) ?? "0.0"}A
                   </div>
-                  <div className="text-sm text-slate-400">
-                    {outerWheelTelemetry?.actual_rpm ?? 0} RPM
-                  </div>
-                  {outerWheelTelemetry?.drive_state === 1 && (
-                    <div className="flex items-center gap-2 text-green-400">
-                      <RotateCw className="w-4 h-4 animate-spin" />
-                      <span className="text-xs font-medium">RUNNING</span>
-                    </div>
-                  )}
+                  <div className="text-sm text-slate-400">{outerWheelTelemetry?.actual_rpm ?? 0} rpm</div>
                 </div>
 
                 {/* DC Bus Voltage */}
-                <div className="bg-raptor-lightgray rounded-lg p-3 sm:p-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 sm:w-6 sm:h-6 bg-purple-400 rounded-full flex items-center justify-center">
-                      <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
-                    </div>
-                    <span className="text-slate-300 font-medium text-sm sm:text-base">
-                      DC Bus Voltage
-                    </span>
+                <div className="bg-raptor-lightgray rounded-lg p-4 text-center">
+                  <div className="w-6 h-6 bg-purple-400 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Zap className="w-4 h-4 text-white" />
                   </div>
-                  <div className="text-2xl sm:text-3xl font-mono text-white">
+                  <div className="text-xs text-slate-400 mb-1">DC Bus</div>
+                  <div className="text-2xl font-mono text-white font-bold">
                     {voltage.toFixed(0)}V
                   </div>
-                  <div className="text-sm text-slate-400">
-                    480V 3-Phase Input
-                  </div>
+                  <div className="text-sm text-slate-400">480V 3φ</div>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
+        )}
+
+        {/* Overview Tab */}
+        {activeTab === "overview" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-start gap-3">
+            <Button className="bg-raptor-yellow hover:bg-yellow-500 text-black font-bold h-9 text-sm w-50">
+              Lockout/Tagout
+            </Button>
+            <Button className="bg-raptor-yellow hover:bg-yellow-500 text-black font-bold h-9 text-sm">
+              Run Diagnostics
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-start gap-3">
+            <Button
+              variant="outline"
+              className="bg-transparent border-slate-600 text-white hover:bg-slate-700 h-9 text-sm"
+            >
+              Export Report
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Notifications */}
+            <Card className="bg-raptor-gray border-slate-700">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-white flex items-center gap-2 text-base">
+                  <Bell className="w-4 h-4" />
+                  Notifications
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex items-start gap-2">
+                  <Badge className="bg-raptor-yellow text-black font-bold text-xs px-2 py-0.5 shrink-0">
+                    ALERT
+                  </Badge>
+                  <p className="text-slate-300 text-xs">
+                    Lockout/Tagout has been implemented in Sweep #1
+                  </p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Badge className="bg-raptor-yellow text-black font-bold text-xs px-2 py-0.5 shrink-0">
+                    ALERT
+                  </Badge>
+                  <p className="text-slate-300 text-xs">
+                    Temperature in Sweep #1 in Zone A is above 90°F
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* LOTO Status */}
+            <Card className="bg-raptor-gray border-slate-700">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-white flex items-center gap-2 text-base">
+                  <Lock className="w-4 h-4" />
+                  LOTO Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-red-400" />
+                  <span className="text-red-400 font-bold">LOCKED</span>
+                </div>
+                <p className="text-slate-300 text-xs">
+                  Only authorized personnel can unlock this sweep.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            {/* Sweep Visualization - Left Column */}
+            <Card className="bg-raptor-gray border-slate-700 xl:col-span-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-white text-base">
+                  Sweep #1 - Zone A
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="relative w-full flex justify-center items-center bg-transparent">
+                    {isRunning ? (
+                      <video
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        preload="auto"
+                        className="w-150 object-contain pointer-events-none"
+                      >
+                        <source
+                          src="/sweep-animations/both/fast.webm"
+                          type="video/webm"
+                        />
+                        <source
+                          src="/sweep-animations/both/fast.mov"
+                          type="video/quicktime"
+                        />
+                        Your browser does not support the video tag.
+                      </video>
+                    ) : (
+                      <Image
+                        src="/raptor-240-stopped.png"
+                        alt="Sweep system stopped"
+                        width={600}
+                        height={400}
+                        className="w-150 object-contain"
+                      />
+                    )}
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {/* Chain Drive */}
+                    <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
+                      <div className="text-white font-bold text-xs mb-0.5">
+                        Chain Drive
+                      </div>
+                      <div className="text-xs text-slate-300 mb-1">
+                        Status: LOCKED
+                      </div>
+                      <div className="text-xs text-slate-400 mb-0.5">Health</div>
+                      <div className="w-full bg-slate-700 rounded-full h-1.5">
+                        <div
+                          className="bg-green-500 h-1.5 rounded-full"
+                          style={{ width: "85%" }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Motor Drive #2 */}
+                    <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
+                      <div className="text-white font-bold text-xs mb-0.5">
+                        Motor Drive #2
+                      </div>
+                      <div className="text-xs text-slate-300 mb-1">
+                        Status: LOCKED
+                      </div>
+                      <div className="text-xs text-slate-400 mb-0.5">Health</div>
+                      <div className="w-full bg-slate-700 rounded-full h-1.5">
+                        <div
+                          className="bg-green-500 h-1.5 rounded-full"
+                          style={{ width: "92%" }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Motor Drive #1 */}
+                    <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
+                      <div className="text-white font-bold text-xs mb-0.5">
+                        Motor Drive #1
+                      </div>
+                      <div className="text-xs text-slate-300 mb-1">
+                        Status: LOCKED
+                      </div>
+                      <div className="text-xs text-slate-400 mb-0.5">Health</div>
+                      <div className="w-full bg-slate-700 rounded-full h-1.5">
+                        <div
+                          className="bg-green-500 h-1.5 rounded-full"
+                          style={{ width: "88%" }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Paddle Chain */}
+                    <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
+                      <div className="text-white font-bold text-xs mb-0.5">
+                        Paddle Chain
+                      </div>
+                      <div className="text-xs text-slate-300 mb-1">
+                        Status: LOCKED
+                      </div>
+                      <div className="text-xs text-slate-400 mb-0.5">Health</div>
+                      <div className="w-full bg-slate-700 rounded-full h-1.5">
+                        <div
+                          className="bg-green-500 h-1.5 rounded-full"
+                          style={{ width: "78%" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bearing - Full Width */}
+                  <div className="bg-raptor-lightgray border-2 border-raptor-yellow rounded-lg p-2">
+                    <div className="text-white font-bold text-xs mb-0.5">
+                      Bearing
+                    </div>
+                    <div className="text-xs text-slate-300 mb-1">
+                      Status: LOCKED
+                    </div>
+                    <div className="text-xs text-slate-400 mb-0.5">Health</div>
+                    <div className="w-full bg-slate-700 rounded-full h-1.5">
+                      <div
+                        className="bg-raptor-yellow h-1.5 rounded-full"
+                        style={{ width: "45%" }}
+                      />
+                    </div>
+                  </div>
+
+                  <Card className="bg-raptor-lightgray border-slate-600">
+                    <CardHeader className="pb-1">
+                      <CardTitle className="text-white text-sm">
+                        Motor Drive #1
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-2">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-slate-400">Temperature:</span>
+                            <span className="text-white">130°F</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-slate-400">Efficiency:</span>
+                            <span className="text-white">75%</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-slate-400">Vibration:</span>
+                            <span className="text-white">8.2 mm/s</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-slate-400">Last Service:</span>
+                            <span className="text-white">6-10-2024</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-slate-400">Status:</span>
+                            <span className="text-red-400 font-bold">LOCKED</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-center">
+                          <div className="relative w-full flex justify-center items-center bg-transparent">
+                            {isRunning ? (
+                              <video
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                preload="auto"
+                                className="w-150 object-contain pointer-events-none"
+                              >
+                                <source src="/close-wheel.webm" type="video/webm" />
+                                <source
+                                  src="/close-wheel.mov"
+                                  type="video/quicktime"
+                                />
+                                Your browser does not support the video tag.
+                              </video>
+                            ) : (
+                              <Image
+                                src="/sweep_motor.png"
+                                alt="Motor stopped"
+                                width={300}
+                                height={200}
+                                className="w-150 object-contain"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="space-y-3">
+              {/* Grain Metrics */}
+              <Card className="bg-raptor-gray border-slate-700">
+                <CardHeader className="pb-1">
+                  <CardTitle className="text-white text-sm">
+                    Grain Metrics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1.5 pt-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Grain Type:</span>
+                    <span className="text-white font-bold">Corn</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Moisture level:</span>
+                    <span className="text-white font-bold">15%</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Temperature:</span>
+                    <span className="text-white font-bold">68°F</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Grain Quality:</span>
+                    <span className="text-white font-bold">97%</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Bin Capacity:</span>
+                    <span className="text-white font-bold">75%</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Flow & Volume Metrics */}
+              <Card className="bg-raptor-gray border-slate-700">
+                <CardHeader className="pb-1">
+                  <CardTitle className="text-white text-sm">
+                    Flow & Volume Metrics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1.5 pt-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Current Flow Rate:</span>
+                    <span className="text-white font-bold">0 bu/hr</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Target Flow Rate:</span>
+                    <span className="text-white font-bold">1,200 bu/hr</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Volume Processed:</span>
+                    <span className="text-white font-bold">24,500 bu</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Total Capacity:</span>
+                    <span className="text-white font-bold">35,000 bu</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Flow Efficiency:</span>
+                    <span className="text-white font-bold">0%</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          <Card className="bg-raptor-gray border-slate-700">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-white text-base">
+                Parts Lifespan Tracking
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 text-xs">Motor Drive #1</span>
+                  <div className="text-right">
+                    <div className="text-white font-bold text-xs">240h left</div>
+                    <div className="text-xs text-slate-400">130°F, 112 RPM</div>
+                  </div>
+                </div>
+                <div className="w-full bg-slate-700 rounded-full h-1.5">
+                  <div
+                    className="bg-green-500 h-1.5 rounded-full"
+                    style={{ width: "65%" }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 text-xs">Motor Drive #2</span>
+                  <div className="text-right">
+                    <div className="text-white font-bold text-xs">231h left</div>
+                    <div className="text-xs text-slate-400">127°F, 104 RPM</div>
+                  </div>
+                </div>
+                <div className="w-full bg-slate-700 rounded-full h-1.5">
+                  <div
+                    className="bg-green-500 h-1.5 rounded-full"
+                    style={{ width: "62%" }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 text-xs">Paddle Chain</span>
+                  <div className="text-right">
+                    <div className="text-white font-bold text-xs">265h left</div>
+                    <div className="text-xs text-slate-400">21mm/s vibration</div>
+                  </div>
+                </div>
+                <div className="w-full bg-slate-700 rounded-full h-1.5">
+                  <div
+                    className="bg-green-500 h-1.5 rounded-full"
+                    style={{ width: "70%" }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 text-xs">Chain Drive</span>
+                  <div className="text-right">
+                    <div className="text-white font-bold text-xs">254h left</div>
+                    <div className="text-xs text-slate-400">94% efficiency</div>
+                  </div>
+                </div>
+                <div className="w-full bg-slate-700 rounded-full h-1.5">
+                  <div
+                    className="bg-green-500 h-1.5 rounded-full"
+                    style={{ width: "68%" }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 text-xs">Bearing</span>
+                  <div className="text-right">
+                    <div className="text-raptor-yellow font-bold text-xs">
+                      38h left
+                    </div>
+                    <div className="text-xs text-raptor-yellow">
+                      High wear detected
+                    </div>
+                  </div>
+                </div>
+                <div className="w-full bg-slate-700 rounded-full h-1.5">
+                  <div
+                    className="bg-raptor-yellow h-1.5 rounded-full"
+                    style={{ width: "15%" }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Active Programs */}
+            <Card className="bg-raptor-gray border-slate-700">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-white text-base">
+                  Active Programs
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="bg-red-900/30 border border-red-700 rounded-lg p-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-white font-medium text-xs">
+                      Temperature Control Protocol
+                    </span>
+                    <Switch
+                      checked={tempControlActive}
+                      onCheckedChange={setTempControlActive}
+                    />
+                  </div>
+                  <Badge className="bg-red-600 text-white text-xs px-2 py-0.5">
+                    Stopped
+                  </Badge>
+                </div>
+
+                <div className="bg-red-900/30 border border-red-700 rounded-lg p-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-white font-medium text-xs">
+                      High Load Protection
+                    </span>
+                    <Switch
+                      checked={highLoadActive}
+                      onCheckedChange={setHighLoadActive}
+                    />
+                  </div>
+                  <Badge className="bg-red-600 text-white text-xs px-2 py-0.5">
+                    Stopped
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* AI Insights */}
+            <Card className="bg-raptor-gray border-slate-700">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-white text-base">
+                  AI Insights
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="bg-raptor-lightgray rounded-lg p-2">
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="flex-1">
+                      <div className="text-white font-medium text-xs mb-0.5">
+                        Bearing Wear Alert
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        High wear detected - 38h remaining
+                      </div>
+                    </div>
+                    <Badge className="bg-red-600 text-white text-xs ml-2 px-2 py-0.5 shrink-0">
+                      CRITICAL
+                    </Badge>
+                  </div>
+                  <Button className="w-full bg-pink-500 hover:bg-pink-600 text-white text-xs h-7 mt-1">
+                    Schedule Maintenance
+                  </Button>
+                </div>
+
+                <div className="bg-raptor-lightgray rounded-lg p-2">
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="flex-1">
+                      <div className="text-white font-medium text-xs mb-0.5">
+                        Efficiency Optimization
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        Reduce speed by 15% to improve efficiency
+                      </div>
+                    </div>
+                    <Badge className="bg-raptor-yellow text-black text-xs ml-2 px-2 py-0.5 shrink-0">
+                      MEDIUM
+                    </Badge>
+                  </div>
+                  <Button className="w-full bg-raptor-yellow hover:bg-yellow-500 text-black text-xs h-7 mt-1">
+                    Schedule Maintenance
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card className="bg-raptor-gray border-slate-700">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-white text-base">
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-start h-9 text-sm">
+                  <History className="w-4 h-4 mr-2" />
+                  Maintenance History
+                </Button>
+                <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white justify-start h-9 text-sm">
+                  <AlertCircle className="w-4 h-4 mr-2" />
+                  Errors & Logs
+                </Button>
+                <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white justify-start h-9 text-sm">
+                  <Headphones className="w-4 h-4 mr-2" />
+                  Remote Support
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        )}
       </div>
     </LayoutWrapper>
   );
