@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: process.env.BUILD_MODE === "local",
   },
+
+  // Enable instrumentation to polyfill localStorage for Node 20+
+  experimental: {
+    instrumentationHook: true,
+  },
 };
 
 export default nextConfig;

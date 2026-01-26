@@ -14,27 +14,58 @@ interface NetworkStatus {
   mode: "local" | "cloud" | "checking";
 }
 
-// Persist Pi detection across tab switches/page navigations
-function getPersistedOnPi(): boolean {
+// Detect if running on localhost dev server (not Pi HMI)
+// Dev server runs on port 3000/3001, Pi nginx runs on port 80
+function isLocalDev(): boolean {
   if (typeof window === "undefined") return false;
-  return localStorage.getItem(STORAGE_KEY) === "true";
+  const { hostname, port } = window.location;
+  const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
+  const isDevPort = port === "3000" || port === "3001";
+  return isLocalhost && isDevPort;
 }
 
-function setPersistedOnPi(value: boolean) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, value ? "true" : "false");
+// Safe localStorage access for browser only
+function safeGetItem(key: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
 }
+
+function safeSetItem(key: string, value: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+function getPersistedOnPi(): boolean {
+  return safeGetItem(STORAGE_KEY) === "true";
+}
+
+function setPersistedOnPi(value: boolean): void {
+  safeSetItem(STORAGE_KEY, value ? "true" : "false");
+}
+
+// Default state for SSR and dev
+const DEFAULT_STATUS: NetworkStatus = {
+  isOnPi: false,
+  isOnline: true,
+  mode: "cloud",
+};
 
 export function useNetworkStatus(): NetworkStatus {
-  // Initialize from localStorage so we don't flash on tab switch
-  const [status, setStatus] = useState<NetworkStatus>(() => {
-    const wasOnPi = getPersistedOnPi();
-    return {
-      isOnPi: wasOnPi,
-      isOnline: false,
-      mode: wasOnPi ? "local" : "checking",
-    };
-  });
+  const [status, setStatus] = useState<NetworkStatus>(DEFAULT_STATUS);
+  const [mounted, setMounted] = useState(false);
+
+  // Mark as mounted on client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const goOffline = useCallback(() => {
     if (getPersistedOnPi()) {
@@ -43,6 +74,21 @@ export function useNetworkStatus(): NetworkStatus {
   }, []);
 
   useEffect(() => {
+    // Don't run until mounted on client
+    if (!mounted) return;
+
+    // Skip all network checking on localhost dev
+    if (isLocalDev()) {
+      setStatus({ isOnPi: false, isOnline: true, mode: "cloud" });
+      return;
+    }
+
+    // Check localStorage on client mount
+    const wasOnPi = getPersistedOnPi();
+    if (wasOnPi) {
+      setStatus({ isOnPi: true, isOnline: false, mode: "local" });
+    }
+
     let destroyed = false;
     let intervalId: NodeJS.Timeout | null = null;
 
@@ -110,7 +156,7 @@ export function useNetworkStatus(): NetworkStatus {
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);
     };
-  }, [goOffline]);
+  }, [mounted, goOffline]);
 
   return status;
 }
