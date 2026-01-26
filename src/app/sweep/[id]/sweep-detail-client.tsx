@@ -766,33 +766,84 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
               <div className="hidden lg:grid lg:grid-cols-12 gap-4">
                 {/* Left side - Sweep with positioned labels (7 cols) */}
                 <div className="col-span-7">
-                  <div className="relative">
-                    {/* Component Labels Grid - positioned around the sweep image */}
-                    <div className="grid grid-cols-[1fr_auto_1fr] grid-rows-[auto_1fr_auto] gap-2 min-h-[400px]">
+                  <div className="relative min-h-[450px]">
+                    {/* SVG Connector Lines */}
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" style={{ overflow: 'visible' }}>
+                      {/* Chain Drive line - from bottom-right of label to top-left of sweep */}
+                      <line x1="22%" y1="18%" x2="35%" y2="35%" stroke="#22c55e" strokeWidth="2" />
+                      <circle cx="35%" cy="35%" r="4" fill="#22c55e" />
 
-                      {/* Row 1: Chain Drive (left) | empty | Motor Drive #2 (right) */}
-                      <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2 self-start">
-                        <div className="text-white font-bold text-xs">Chain Drive</div>
-                        <div className="text-xs text-slate-300">Status: LOCKED</div>
-                        <div className="text-xs text-slate-400 mt-1">Health</div>
-                        <div className="w-full bg-slate-700 rounded-full h-1.5">
-                          <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "85%" }} />
-                        </div>
-                      </div>
-                      <div /> {/* empty center top */}
-                      <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2 self-start">
-                        <div className="text-white font-bold text-xs">Motor Drive #2</div>
-                        <div className="text-xs text-slate-300">Status: LOCKED</div>
-                        <div className="text-xs text-slate-400 mt-1">Health</div>
-                        <div className="w-full bg-slate-700 rounded-full h-1.5">
-                          <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "92%" }} />
-                        </div>
-                      </div>
+                      {/* Motor Drive #2 line - from bottom-left of label to top-right of sweep */}
+                      <line x1="78%" y1="18%" x2="65%" y2="35%" stroke="#22c55e" strokeWidth="2" />
+                      <circle cx="65%" cy="35%" r="4" fill="#22c55e" />
 
-                      {/* Row 2: empty | SWEEP IMAGE | Motor Drive #1 (right middle) */}
-                      <div /> {/* empty left middle */}
-                      <div className="relative flex justify-center items-center bg-raptor-dark/30 rounded-lg p-4">
-                        <div className="absolute top-2 right-2 bg-green-500 px-2 py-1 rounded text-xs text-white font-bold">
+                      {/* Motor Drive #1 line - from left of label to right of sweep */}
+                      <line x1="78%" y1="50%" x2="68%" y2="50%" stroke="#22c55e" strokeWidth="2" />
+                      <circle cx="68%" cy="50%" r="4" fill="#22c55e" />
+
+                      {/* Paddle Chain line - from top-right of label to bottom-left of sweep */}
+                      <line x1="22%" y1="82%" x2="35%" y2="65%" stroke="#22c55e" strokeWidth="2" />
+                      <circle cx="35%" cy="65%" r="4" fill="#22c55e" />
+
+                      {/* Bearing line - from top-left of label to bottom-right of sweep */}
+                      <line x1="78%" y1="82%" x2="65%" y2="68%" stroke="#eab308" strokeWidth="2" />
+                      <circle cx="65%" cy="68%" r="4" fill="#eab308" />
+                    </svg>
+
+                    {/* Chain Drive - Top Left */}
+                    <div className="absolute top-0 left-0 w-[120px] bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2 z-20">
+                      <div className="text-white font-bold text-xs">Chain Drive</div>
+                      <div className="text-xs text-slate-300">Status: LOCKED</div>
+                      <div className="text-xs text-slate-400 mt-1">Health</div>
+                      <div className="w-full bg-slate-700 rounded-full h-1.5">
+                        <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "85%" }} />
+                      </div>
+                    </div>
+
+                    {/* Motor Drive #2 - Top Right */}
+                    <div className="absolute top-0 right-0 w-[120px] bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2 z-20">
+                      <div className="text-white font-bold text-xs">Motor Drive #2</div>
+                      <div className="text-xs text-slate-300">Status: LOCKED</div>
+                      <div className="text-xs text-slate-400 mt-1">Health</div>
+                      <div className="w-full bg-slate-700 rounded-full h-1.5">
+                        <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "92%" }} />
+                      </div>
+                    </div>
+
+                    {/* Motor Drive #1 - Right Middle */}
+                    <div className="absolute top-1/2 right-0 -translate-y-1/2 w-[120px] bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2 z-20">
+                      <div className="text-white font-bold text-xs">Motor Drive #1</div>
+                      <div className="text-xs text-slate-300">Status: LOCKED</div>
+                      <div className="text-xs text-slate-400 mt-1">Health</div>
+                      <div className="w-full bg-slate-700 rounded-full h-1.5">
+                        <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "88%" }} />
+                      </div>
+                    </div>
+
+                    {/* Paddle Chain - Bottom Left */}
+                    <div className="absolute bottom-0 left-0 w-[120px] bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2 z-20">
+                      <div className="text-white font-bold text-xs">Paddle Chain</div>
+                      <div className="text-xs text-slate-300">Status: LOCKED</div>
+                      <div className="text-xs text-slate-400 mt-1">Health</div>
+                      <div className="w-full bg-slate-700 rounded-full h-1.5">
+                        <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "78%" }} />
+                      </div>
+                    </div>
+
+                    {/* Bearing - Bottom Right */}
+                    <div className="absolute bottom-0 right-0 w-[120px] bg-raptor-lightgray border-2 border-raptor-yellow rounded-lg p-2 z-20">
+                      <div className="text-white font-bold text-xs">Bearing</div>
+                      <div className="text-xs text-slate-300">Status: LOCKED</div>
+                      <div className="text-xs text-slate-400 mt-1">Health</div>
+                      <div className="w-full bg-slate-700 rounded-full h-1.5">
+                        <div className="bg-raptor-yellow h-1.5 rounded-full" style={{ width: "45%" }} />
+                      </div>
+                    </div>
+
+                    {/* Sweep Image - Center */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex justify-center items-center">
+                      <div className="relative bg-raptor-dark/30 rounded-lg p-2">
+                        <div className="absolute -top-1 -right-1 bg-green-500 px-2 py-1 rounded text-xs text-white font-bold z-30">
                           FRONT
                         </div>
                         {isRunning ? (
@@ -802,7 +853,7 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                             muted
                             playsInline
                             preload="auto"
-                            className="max-h-[240px] object-contain pointer-events-none"
+                            className="h-[280px] w-auto object-contain pointer-events-none"
                           >
                             <source src="/sweep-animations/both/fast.webm" type="video/webm" />
                             <source src="/sweep-animations/both/fast.mov" type="video/quicktime" />
@@ -811,38 +862,11 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                           <Image
                             src="/raptor-240-stopped.png"
                             alt="Sweep system stopped"
-                            width={350}
-                            height={240}
-                            className="max-h-[240px] object-contain"
+                            width={400}
+                            height={280}
+                            className="h-[280px] w-auto object-contain"
                           />
                         )}
-                      </div>
-                      <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2 self-center">
-                        <div className="text-white font-bold text-xs">Motor Drive #1</div>
-                        <div className="text-xs text-slate-300">Status: LOCKED</div>
-                        <div className="text-xs text-slate-400 mt-1">Health</div>
-                        <div className="w-full bg-slate-700 rounded-full h-1.5">
-                          <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "88%" }} />
-                        </div>
-                      </div>
-
-                      {/* Row 3: Paddle Chain (left) | empty | Bearing (right) */}
-                      <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2 self-end">
-                        <div className="text-white font-bold text-xs">Paddle Chain</div>
-                        <div className="text-xs text-slate-300">Status: LOCKED</div>
-                        <div className="text-xs text-slate-400 mt-1">Health</div>
-                        <div className="w-full bg-slate-700 rounded-full h-1.5">
-                          <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "78%" }} />
-                        </div>
-                      </div>
-                      <div /> {/* empty center bottom */}
-                      <div className="bg-raptor-lightgray border-2 border-raptor-yellow rounded-lg p-2 self-end">
-                        <div className="text-white font-bold text-xs">Bearing</div>
-                        <div className="text-xs text-slate-300">Status: LOCKED</div>
-                        <div className="text-xs text-slate-400 mt-1">Health</div>
-                        <div className="w-full bg-slate-700 rounded-full h-1.5">
-                          <div className="bg-raptor-yellow h-1.5 rounded-full" style={{ width: "45%" }} />
-                        </div>
                       </div>
                     </div>
                   </div>
