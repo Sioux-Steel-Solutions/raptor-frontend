@@ -128,9 +128,9 @@ export function useNetworkAwareMqtt(options: NetworkAwareMqttOptions = {}) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const options: any = {
-      reconnectPeriod: 2000,      // Reconnect faster (2s instead of 5s)
-      connectTimeout: 10000,      // Shorter timeout (10s instead of 30s)
-      keepalive: 15,              // More frequent keepalive (15s instead of 30s)
+      reconnectPeriod: 1000,      // Fast reconnect (1s)
+      connectTimeout: 10000,      // 10s connection timeout
+      keepalive: 30,              // Ping every 30s (balanced - not too chatty, not too idle)
       clean: true,                // Clean session on reconnect
       resubscribe: true,          // Auto-resubscribe on reconnect
       // Custom WebSocket factory to force 'mqtt' protocol only
