@@ -57,6 +57,91 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
   const [tempControlActive, setTempControlActive] = useState(false);
   const [highLoadActive, setHighLoadActive] = useState(false);
 
+  // Selected component for detail view
+  type ComponentKey = "motor1" | "motor2" | "chain" | "paddle" | "bearing";
+  const [selectedComponent, setSelectedComponent] = useState<ComponentKey>("motor1");
+
+  // Component details data
+  const componentDetails: Record<ComponentKey, {
+    name: string;
+    temperature: string;
+    efficiency: string;
+    vibration: string;
+    lastService: string;
+    status: string;
+    statusColor: string;
+    healthPercent: number;
+    hoursLeft: string;
+    healthNote: string;
+    borderColor: string;
+  }> = {
+    motor1: {
+      name: "Motor Drive #1",
+      temperature: "130°F",
+      efficiency: "78%",
+      vibration: "8.2 mm/s",
+      lastService: "6-10-2024",
+      status: "LOCKED",
+      statusColor: "text-red-400",
+      healthPercent: 88,
+      hoursLeft: "240h left",
+      healthNote: "130°F, 112 RPM",
+      borderColor: "border-green-500",
+    },
+    motor2: {
+      name: "Motor Drive #2",
+      temperature: "127°F",
+      efficiency: "82%",
+      vibration: "6.4 mm/s",
+      lastService: "6-10-2024",
+      status: "LOCKED",
+      statusColor: "text-red-400",
+      healthPercent: 92,
+      hoursLeft: "231h left",
+      healthNote: "127°F, 104 RPM",
+      borderColor: "border-green-500",
+    },
+    chain: {
+      name: "Chain Drive",
+      temperature: "95°F",
+      efficiency: "94%",
+      vibration: "3.2 mm/s",
+      lastService: "5-15-2024",
+      status: "LOCKED",
+      statusColor: "text-red-400",
+      healthPercent: 85,
+      hoursLeft: "254h left",
+      healthNote: "94% efficiency",
+      borderColor: "border-green-500",
+    },
+    paddle: {
+      name: "Paddle Chain",
+      temperature: "88°F",
+      efficiency: "91%",
+      vibration: "2.1 mm/s",
+      lastService: "5-20-2024",
+      status: "LOCKED",
+      statusColor: "text-red-400",
+      healthPercent: 78,
+      hoursLeft: "265h left",
+      healthNote: "2.1mm/s vibration",
+      borderColor: "border-green-500",
+    },
+    bearing: {
+      name: "Bearing",
+      temperature: "142°F",
+      efficiency: "45%",
+      vibration: "12.8 mm/s",
+      lastService: "3-02-2024",
+      status: "LOCKED",
+      statusColor: "text-red-400",
+      healthPercent: 45,
+      hoursLeft: "38h left",
+      healthNote: "High wear detected",
+      borderColor: "border-raptor-yellow",
+    },
+  };
+
   const [isRunning, setIsRunning] = useState(false);
   const [sweepPosition, setSweepPosition] = useState(0);
   const [operatingHours, setOperatingHours] = useState(1247.5);
@@ -791,54 +876,89 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                     </svg>
 
                     {/* Chain Drive - Top Left */}
-                    <div className="absolute top-0 left-0 w-[120px] bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2 z-20">
+                    <button
+                      onClick={() => setSelectedComponent("chain")}
+                      className={`absolute top-0 left-0 w-[120px] bg-raptor-lightgray border-2 rounded-lg p-2 z-20 text-left transition-all hover:scale-105 ${
+                        selectedComponent === "chain"
+                          ? "border-white ring-2 ring-white/50 shadow-lg"
+                          : "border-green-500 hover:border-white/50"
+                      }`}
+                    >
                       <div className="text-white font-bold text-xs">Chain Drive</div>
                       <div className="text-xs text-slate-300">Status: LOCKED</div>
                       <div className="text-xs text-slate-400 mt-1">Health</div>
                       <div className="w-full bg-slate-700 rounded-full h-1.5">
                         <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "85%" }} />
                       </div>
-                    </div>
+                    </button>
 
                     {/* Motor Drive #2 - Top Right */}
-                    <div className="absolute top-0 right-0 w-[120px] bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2 z-20">
+                    <button
+                      onClick={() => setSelectedComponent("motor2")}
+                      className={`absolute top-0 right-0 w-[120px] bg-raptor-lightgray border-2 rounded-lg p-2 z-20 text-left transition-all hover:scale-105 ${
+                        selectedComponent === "motor2"
+                          ? "border-white ring-2 ring-white/50 shadow-lg"
+                          : "border-green-500 hover:border-white/50"
+                      }`}
+                    >
                       <div className="text-white font-bold text-xs">Motor Drive #2</div>
                       <div className="text-xs text-slate-300">Status: LOCKED</div>
                       <div className="text-xs text-slate-400 mt-1">Health</div>
                       <div className="w-full bg-slate-700 rounded-full h-1.5">
                         <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "92%" }} />
                       </div>
-                    </div>
+                    </button>
 
                     {/* Motor Drive #1 - Right Middle */}
-                    <div className="absolute top-1/2 right-0 -translate-y-1/2 w-[120px] bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2 z-20">
+                    <button
+                      onClick={() => setSelectedComponent("motor1")}
+                      className={`absolute top-1/2 right-0 -translate-y-1/2 w-[120px] bg-raptor-lightgray border-2 rounded-lg p-2 z-20 text-left transition-all hover:scale-105 ${
+                        selectedComponent === "motor1"
+                          ? "border-white ring-2 ring-white/50 shadow-lg"
+                          : "border-green-500 hover:border-white/50"
+                      }`}
+                    >
                       <div className="text-white font-bold text-xs">Motor Drive #1</div>
                       <div className="text-xs text-slate-300">Status: LOCKED</div>
                       <div className="text-xs text-slate-400 mt-1">Health</div>
                       <div className="w-full bg-slate-700 rounded-full h-1.5">
                         <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "88%" }} />
                       </div>
-                    </div>
+                    </button>
 
                     {/* Paddle Chain - Bottom Left */}
-                    <div className="absolute bottom-0 left-0 w-[120px] bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2 z-20">
+                    <button
+                      onClick={() => setSelectedComponent("paddle")}
+                      className={`absolute bottom-0 left-0 w-[120px] bg-raptor-lightgray border-2 rounded-lg p-2 z-20 text-left transition-all hover:scale-105 ${
+                        selectedComponent === "paddle"
+                          ? "border-white ring-2 ring-white/50 shadow-lg"
+                          : "border-green-500 hover:border-white/50"
+                      }`}
+                    >
                       <div className="text-white font-bold text-xs">Paddle Chain</div>
                       <div className="text-xs text-slate-300">Status: LOCKED</div>
                       <div className="text-xs text-slate-400 mt-1">Health</div>
                       <div className="w-full bg-slate-700 rounded-full h-1.5">
                         <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "78%" }} />
                       </div>
-                    </div>
+                    </button>
 
                     {/* Bearing - Bottom Right */}
-                    <div className="absolute bottom-0 right-0 w-[120px] bg-raptor-lightgray border-2 border-raptor-yellow rounded-lg p-2 z-20">
+                    <button
+                      onClick={() => setSelectedComponent("bearing")}
+                      className={`absolute bottom-0 right-0 w-[120px] bg-raptor-lightgray border-2 rounded-lg p-2 z-20 text-left transition-all hover:scale-105 ${
+                        selectedComponent === "bearing"
+                          ? "border-white ring-2 ring-white/50 shadow-lg"
+                          : "border-raptor-yellow hover:border-white/50"
+                      }`}
+                    >
                       <div className="text-white font-bold text-xs">Bearing</div>
                       <div className="text-xs text-slate-300">Status: LOCKED</div>
                       <div className="text-xs text-slate-400 mt-1">Health</div>
                       <div className="w-full bg-slate-700 rounded-full h-1.5">
                         <div className="bg-raptor-yellow h-1.5 rounded-full" style={{ width: "45%" }} />
                       </div>
-                    </div>
+                    </button>
 
                     {/* Sweep Image - Center */}
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex justify-center items-center">
@@ -1089,9 +1209,9 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
             </CardContent>
           </Card>
 
-          {/* Motor Drive #1 Detail Section - Image left, Stats right */}
-          <div className="flex flex-col sm:flex-row gap-4 items-stretch">
-            {/* Motor Image */}
+          {/* Selected Component Detail Section - Image left, Stats right */}
+          <div className={`flex flex-col sm:flex-row gap-4 items-stretch border-2 rounded-lg ${componentDetails[selectedComponent].borderColor}`}>
+            {/* Component Image */}
             <div className="sm:w-1/3 flex items-center justify-center bg-raptor-gray rounded-lg p-4">
               {isRunning ? (
                 <video
@@ -1108,37 +1228,63 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
               ) : (
                 <Image
                   src="/sweep_motor.png"
-                  alt="Motor stopped"
+                  alt={`${componentDetails[selectedComponent].name} stopped`}
                   width={200}
                   height={160}
                   className="max-h-[160px] object-contain"
                 />
               )}
             </div>
-            {/* Motor Stats */}
+            {/* Component Stats */}
             <div className="sm:w-2/3 bg-raptor-gray rounded-lg p-4">
-              <h4 className="text-white font-bold text-base mb-3">Motor Drive #1</h4>
+              <h4 className="text-white font-bold text-base mb-3">{componentDetails[selectedComponent].name}</h4>
               <div className="grid grid-cols-2 gap-x-8 gap-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Temperature:</span>
-                  <span className="text-white font-bold">130°F</span>
+                  <span className="text-white font-bold">{componentDetails[selectedComponent].temperature}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Vibration:</span>
-                  <span className="text-white font-bold">8.2 mm/s</span>
+                  <span className="text-white font-bold">{componentDetails[selectedComponent].vibration}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Efficiency:</span>
-                  <span className="text-white font-bold">78%</span>
+                  <span className="text-white font-bold">{componentDetails[selectedComponent].efficiency}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Last Service:</span>
-                  <span className="text-white font-bold">6-10-2024</span>
+                  <span className="text-white font-bold">{componentDetails[selectedComponent].lastService}</span>
                 </div>
-                <div className="flex justify-between text-sm col-span-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Hours Left:</span>
+                  <span className={selectedComponent === "bearing" ? "text-raptor-yellow font-bold" : "text-white font-bold"}>
+                    {componentDetails[selectedComponent].hoursLeft}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Status:</span>
-                  <span className="text-red-400 font-bold">LOCKED</span>
+                  <span className={`font-bold ${componentDetails[selectedComponent].statusColor}`}>
+                    {componentDetails[selectedComponent].status}
+                  </span>
                 </div>
+              </div>
+              {/* Health bar */}
+              <div className="mt-3">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-slate-400">Health</span>
+                  <span className={selectedComponent === "bearing" ? "text-raptor-yellow" : "text-green-400"}>
+                    {componentDetails[selectedComponent].healthPercent}%
+                  </span>
+                </div>
+                <div className="w-full bg-slate-700 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full ${selectedComponent === "bearing" ? "bg-raptor-yellow" : "bg-green-500"}`}
+                    style={{ width: `${componentDetails[selectedComponent].healthPercent}%` }}
+                  />
+                </div>
+                {selectedComponent === "bearing" && (
+                  <div className="text-raptor-yellow text-xs mt-1">⚠ High wear detected - schedule maintenance</div>
+                )}
               </div>
             </div>
           </div>
