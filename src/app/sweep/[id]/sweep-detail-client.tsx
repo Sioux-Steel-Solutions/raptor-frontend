@@ -149,9 +149,21 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
   // Toggle between sweep position dial and camera feed
   const [showCameraFeed, setShowCameraFeed] = useState(true);
 
-  // Camera stream fallback - use snapshot refresh if stream fails
+  // Camera stream with reconnection support
+  const [streamKey, setStreamKey] = useState(0);
   const [streamFailed, setStreamFailed] = useState(false);
   const [snapshotKey, setSnapshotKey] = useState(0);
+  const streamLoadedRef = useRef(false);
+
+  // Reconnect stream every 30 seconds to prevent Chrome from killing it
+  useEffect(() => {
+    if (streamFailed || !showCameraFeed) return;
+    const interval = setInterval(() => {
+      console.log("[Camera] Refreshing stream connection");
+      setStreamKey(k => k + 1);
+    }, 30000); // 30 seconds
+    return () => clearInterval(interval);
+  }, [streamFailed, showCameraFeed]);
 
   // Auto-refresh snapshot every 500ms if stream failed
   useEffect(() => {
@@ -675,18 +687,24 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                           alt="PTZ Camera Feed (Snapshot Mode)"
                           className="w-full h-full object-contain"
                           loading="eager"
+                          crossOrigin="anonymous"
                         />
                       ) : (
-                        // Primary: MJPEG stream
+                        // Primary: MJPEG stream with periodic reconnection
                         <img
-                          src="https://ptz-camera.tailc61a08.ts.net/?action=stream"
+                          key={streamKey}
+                          src={`https://ptz-camera.tailc61a08.ts.net/?action=stream&t=${streamKey}`}
                           alt="PTZ Camera Feed"
                           className="w-full h-full object-contain"
                           loading="eager"
                           decoding="async"
+                          crossOrigin="anonymous"
                           onError={() => {
                             console.log("[Camera] Stream failed, falling back to snapshots");
                             setStreamFailed(true);
+                          }}
+                          onLoad={() => {
+                            streamLoadedRef.current = true;
                           }}
                           // @ts-expect-error - fetchpriority is valid but not in React types
                           fetchpriority="high"
