@@ -149,17 +149,6 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
   // Toggle between sweep position dial and camera feed
   const [showCameraFeed, setShowCameraFeed] = useState(true);
 
-  // Snapshot refresh for camera feed
-  const [snapshotKey, setSnapshotKey] = useState(0);
-
-  // Auto-refresh snapshot every 100ms (~10fps)
-  useEffect(() => {
-    if (!showCameraFeed) return;
-    const interval = setInterval(() => {
-      setSnapshotKey(k => k + 1);
-    }, 100);
-    return () => clearInterval(interval);
-  }, [showCameraFeed]);
 
   // Per-VFD telemetry (NEW - replaces fake temperature/humidity/chainRpm)
   const [chainTelemetry, setChainTelemetry] = useState<VFDTelemetry | null>(null);
@@ -666,13 +655,12 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                 {showCameraFeed ? (
                   <>
                     <div className="relative w-full aspect-video mb-4 overflow-hidden rounded-lg bg-black">
-                      {/* Snapshot mode - most compatible across all browsers */}
-                      <img
-                        key={snapshotKey}
-                        src={`https://ptz-camera.tailc61a08.ts.net/?action=snapshot&t=${snapshotKey}`}
-                        alt="PTZ Camera Feed"
-                        className="w-full h-full object-contain"
-                        loading="eager"
+                      {/* WebRTC stream via go2rtc - works for everyone */}
+                      <iframe
+                        src="https://ptz-camera.tailc61a08.ts.net/stream.html?src=ptz-camera&mode=webrtc"
+                        title="PTZ Camera Feed"
+                        className="w-full h-full border-0"
+                        allow="autoplay"
                       />
                     </div>
                     <div className="bg-raptor-lightgray rounded-lg px-4 py-3 w-full">
