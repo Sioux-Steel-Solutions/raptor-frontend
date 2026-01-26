@@ -687,27 +687,17 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                           alt="PTZ Camera Feed (Snapshot Mode)"
                           className="w-full h-full object-contain"
                           loading="eager"
-                          crossOrigin="anonymous"
                         />
                       ) : (
-                        // Primary: MJPEG stream with periodic reconnection
+                        // Primary: MJPEG stream
                         <img
-                          key={streamKey}
-                          src={`https://ptz-camera.tailc61a08.ts.net/?action=stream&t=${streamKey}`}
+                          src="https://ptz-camera.tailc61a08.ts.net/?action=stream"
                           alt="PTZ Camera Feed"
                           className="w-full h-full object-contain"
-                          loading="eager"
-                          decoding="async"
-                          crossOrigin="anonymous"
                           onError={() => {
                             console.log("[Camera] Stream failed, falling back to snapshots");
                             setStreamFailed(true);
                           }}
-                          onLoad={() => {
-                            streamLoadedRef.current = true;
-                          }}
-                          // @ts-expect-error - fetchpriority is valid but not in React types
-                          fetchpriority="high"
                         />
                       )}
                     </div>
