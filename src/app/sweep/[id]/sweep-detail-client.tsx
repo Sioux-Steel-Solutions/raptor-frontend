@@ -149,30 +149,17 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
   // Toggle between sweep position dial and camera feed
   const [showCameraFeed, setShowCameraFeed] = useState(true);
 
-  // Camera stream with reconnection support
-  const [streamKey, setStreamKey] = useState(0);
-  const [streamFailed, setStreamFailed] = useState(false);
+  // Snapshot refresh for camera feed
   const [snapshotKey, setSnapshotKey] = useState(0);
-  const streamLoadedRef = useRef(false);
 
-  // Reconnect stream every 30 seconds to prevent Chrome from killing it
+  // Auto-refresh snapshot every 100ms (~10fps)
   useEffect(() => {
-    if (streamFailed || !showCameraFeed) return;
-    const interval = setInterval(() => {
-      console.log("[Camera] Refreshing stream connection");
-      setStreamKey(k => k + 1);
-    }, 30000); // 30 seconds
-    return () => clearInterval(interval);
-  }, [streamFailed, showCameraFeed]);
-
-  // Auto-refresh snapshot every 100ms (~10fps) if stream failed
-  useEffect(() => {
-    if (!streamFailed || !showCameraFeed) return;
+    if (!showCameraFeed) return;
     const interval = setInterval(() => {
       setSnapshotKey(k => k + 1);
     }, 100);
     return () => clearInterval(interval);
-  }, [streamFailed, showCameraFeed]);
+  }, [showCameraFeed]);
 
   // Per-VFD telemetry (NEW - replaces fake temperature/humidity/chainRpm)
   const [chainTelemetry, setChainTelemetry] = useState<VFDTelemetry | null>(null);
@@ -679,28 +666,14 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                 {showCameraFeed ? (
                   <>
                     <div className="relative w-full aspect-video mb-4 overflow-hidden rounded-lg bg-black">
-                      {streamFailed ? (
-                        // Fallback: refresh snapshots every 100ms (~10fps)
-                        <img
-                          key={snapshotKey}
-                          src={`https://ptz-camera.tailc61a08.ts.net/?action=snapshot&t=${snapshotKey}`}
-                          alt="PTZ Camera Feed (Snapshot Mode)"
-                          className="w-full h-full object-contain"
-                          loading="eager"
-                        />
-                      ) : (
-                        // Primary: Use iframe for better MJPEG compatibility
-                        <iframe
-                          src="https://ptz-camera.tailc61a08.ts.net/?action=stream"
-                          title="PTZ Camera Feed"
-                          className="w-full h-full border-0"
-                          allow="autoplay"
-                          onError={() => {
-                            console.log("[Camera] Stream failed, falling back to snapshots");
-                            setStreamFailed(true);
-                          }}
-                        />
-                      )}
+                      {/* Snapshot mode - most compatible across all browsers */}
+                      <img
+                        key={snapshotKey}
+                        src={`https://ptz-camera.tailc61a08.ts.net/?action=snapshot&t=${snapshotKey}`}
+                        alt="PTZ Camera Feed"
+                        className="w-full h-full object-contain"
+                        loading="eager"
+                      />
                     </div>
                     <div className="bg-raptor-lightgray rounded-lg px-4 py-3 w-full">
                       <div className="flex justify-between items-center gap-4">
@@ -709,14 +682,12 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                             Live Feed
                           </div>
                           <div className="text-xs text-slate-400">
-                            {streamFailed ? "SNAPSHOT MODE" : "PTZ CAMERA"}
+                            PTZ CAMERA
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
-                          <div className={`w-2 h-2 rounded-full animate-pulse ${streamFailed ? "bg-yellow-500" : "bg-green-500"}`} />
-                          <span className={`text-xs ${streamFailed ? "text-yellow-400" : "text-green-400"}`}>
-                            {streamFailed ? "FALLBACK" : "LIVE"}
-                          </span>
+                          <div className="w-2 h-2 rounded-full animate-pulse bg-green-500" />
+                          <span className="text-xs text-green-400">LIVE</span>
                         </div>
                       </div>
                     </div>
