@@ -753,264 +753,308 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
             </Card>
           </div>
 
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            {/* Sweep Visualization - Left Column */}
-            <Card className="bg-raptor-gray border-slate-700 xl:col-span-2">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-white text-base">
-                  Sweep #1 - Zone A
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="relative w-full flex justify-center items-center bg-transparent">
-                    {isRunning ? (
-                      <video
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        preload="auto"
-                        className="w-150 object-contain pointer-events-none"
-                      >
-                        <source
-                          src="/sweep-animations/both/fast.webm"
-                          type="video/webm"
-                        />
-                        <source
-                          src="/sweep-animations/both/fast.mov"
-                          type="video/quicktime"
-                        />
-                        Your browser does not support the video tag.
-                      </video>
-                    ) : (
-                      <Image
-                        src="/raptor-240-stopped.png"
-                        alt="Sweep system stopped"
-                        width={600}
-                        height={400}
-                        className="w-150 object-contain"
-                      />
-                    )}
-                  </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {/* Chain Drive */}
-                    <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
-                      <div className="text-white font-bold text-xs mb-0.5">
-                        Chain Drive
-                      </div>
-                      <div className="text-xs text-slate-300 mb-1">
-                        Status: LOCKED
-                      </div>
-                      <div className="text-xs text-slate-400 mb-0.5">Health</div>
-                      <div className="w-full bg-slate-700 rounded-full h-1.5">
-                        <div
-                          className="bg-green-500 h-1.5 rounded-full"
-                          style={{ width: "85%" }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Motor Drive #2 */}
-                    <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
-                      <div className="text-white font-bold text-xs mb-0.5">
-                        Motor Drive #2
-                      </div>
-                      <div className="text-xs text-slate-300 mb-1">
-                        Status: LOCKED
-                      </div>
-                      <div className="text-xs text-slate-400 mb-0.5">Health</div>
-                      <div className="w-full bg-slate-700 rounded-full h-1.5">
-                        <div
-                          className="bg-green-500 h-1.5 rounded-full"
-                          style={{ width: "92%" }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Motor Drive #1 */}
-                    <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
-                      <div className="text-white font-bold text-xs mb-0.5">
-                        Motor Drive #1
-                      </div>
-                      <div className="text-xs text-slate-300 mb-1">
-                        Status: LOCKED
-                      </div>
-                      <div className="text-xs text-slate-400 mb-0.5">Health</div>
-                      <div className="w-full bg-slate-700 rounded-full h-1.5">
-                        <div
-                          className="bg-green-500 h-1.5 rounded-full"
-                          style={{ width: "88%" }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Paddle Chain */}
-                    <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
-                      <div className="text-white font-bold text-xs mb-0.5">
-                        Paddle Chain
-                      </div>
-                      <div className="text-xs text-slate-300 mb-1">
-                        Status: LOCKED
-                      </div>
-                      <div className="text-xs text-slate-400 mb-0.5">Health</div>
-                      <div className="w-full bg-slate-700 rounded-full h-1.5">
-                        <div
-                          className="bg-green-500 h-1.5 rounded-full"
-                          style={{ width: "78%" }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bearing - Full Width */}
-                  <div className="bg-raptor-lightgray border-2 border-raptor-yellow rounded-lg p-2">
-                    <div className="text-white font-bold text-xs mb-0.5">
-                      Bearing
-                    </div>
-                    <div className="text-xs text-slate-300 mb-1">
-                      Status: LOCKED
-                    </div>
-                    <div className="text-xs text-slate-400 mb-0.5">Health</div>
-                    <div className="w-full bg-slate-700 rounded-full h-1.5">
-                      <div
-                        className="bg-raptor-yellow h-1.5 rounded-full"
-                        style={{ width: "45%" }}
-                      />
-                    </div>
-                  </div>
-
-                  <Card className="bg-raptor-lightgray border-slate-600">
-                    <CardHeader className="pb-1">
-                      <CardTitle className="text-white text-sm">
-                        Motor Drive #1
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-2">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-slate-400">Temperature:</span>
-                            <span className="text-white">130°F</span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-slate-400">Efficiency:</span>
-                            <span className="text-white">75%</span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-slate-400">Vibration:</span>
-                            <span className="text-white">8.2 mm/s</span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-slate-400">Last Service:</span>
-                            <span className="text-white">6-10-2024</span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-slate-400">Status:</span>
-                            <span className="text-red-400 font-bold">LOCKED</span>
+          {/* Main Content - Sweep Visualization with Component Labels */}
+          <Card className="bg-raptor-gray border-slate-700">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-white text-base">
+                Sweep #1 - Zone A
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* Desktop Layout - Component labels positioned around image */}
+              <div className="hidden lg:block">
+                <div className="grid grid-cols-12 gap-4">
+                  {/* Left side - Sweep with positioned labels */}
+                  <div className="col-span-8">
+                    <div className="relative">
+                      {/* Component Labels - Positioned around the image */}
+                      <div className="grid grid-cols-3 gap-2 mb-2">
+                        {/* Chain Drive - Top Left */}
+                        <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
+                          <div className="text-white font-bold text-xs">Chain Drive</div>
+                          <div className="text-xs text-slate-300">Status: LOCKED</div>
+                          <div className="text-xs text-slate-400 mt-1">Health</div>
+                          <div className="w-full bg-slate-700 rounded-full h-1.5">
+                            <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "85%" }} />
                           </div>
                         </div>
-                        <div className="flex items-center justify-center">
-                          <div className="relative w-full flex justify-center items-center bg-transparent">
-                            {isRunning ? (
-                              <video
-                                autoPlay
-                                loop
-                                muted
-                                playsInline
-                                preload="auto"
-                                className="w-150 object-contain pointer-events-none"
-                              >
-                                <source src="/close-wheel.webm" type="video/webm" />
-                                <source
-                                  src="/close-wheel.mov"
-                                  type="video/quicktime"
-                                />
-                                Your browser does not support the video tag.
-                              </video>
-                            ) : (
-                              <Image
-                                src="/sweep_motor.png"
-                                alt="Motor stopped"
-                                width={300}
-                                height={200}
-                                className="w-150 object-contain"
-                              />
-                            )}
+                        {/* Motor Drive #2 - Top Center */}
+                        <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
+                          <div className="text-white font-bold text-xs">Motor Drive #2</div>
+                          <div className="text-xs text-slate-300">Status: LOCKED</div>
+                          <div className="text-xs text-slate-400 mt-1">Health</div>
+                          <div className="w-full bg-slate-700 rounded-full h-1.5">
+                            <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "92%" }} />
+                          </div>
+                        </div>
+                        {/* Motor Drive #1 - Top Right */}
+                        <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
+                          <div className="text-white font-bold text-xs">Motor Drive #1</div>
+                          <div className="text-xs text-slate-300">Status: LOCKED</div>
+                          <div className="text-xs text-slate-400 mt-1">Health</div>
+                          <div className="w-full bg-slate-700 rounded-full h-1.5">
+                            <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "88%" }} />
                           </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+
+                      {/* Sweep Image */}
+                      <div className="relative flex justify-center items-center bg-raptor-dark/30 rounded-lg py-4">
+                        <div className="absolute top-2 right-2 bg-raptor-lightgray px-2 py-1 rounded text-xs text-slate-300 font-medium">
+                          FRONT
+                        </div>
+                        {isRunning ? (
+                          <video
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            preload="auto"
+                            className="max-h-[280px] object-contain pointer-events-none"
+                          >
+                            <source src="/sweep-animations/both/fast.webm" type="video/webm" />
+                            <source src="/sweep-animations/both/fast.mov" type="video/quicktime" />
+                          </video>
+                        ) : (
+                          <Image
+                            src="/raptor-240-stopped.png"
+                            alt="Sweep system stopped"
+                            width={400}
+                            height={280}
+                            className="max-h-[280px] object-contain"
+                          />
+                        )}
+                      </div>
+
+                      {/* Bottom row labels */}
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        {/* Paddle Chain - Bottom Left */}
+                        <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
+                          <div className="text-white font-bold text-xs">Paddle Chain</div>
+                          <div className="text-xs text-slate-300">Status: LOCKED</div>
+                          <div className="text-xs text-slate-400 mt-1">Health</div>
+                          <div className="w-full bg-slate-700 rounded-full h-1.5">
+                            <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "78%" }} />
+                          </div>
+                        </div>
+                        {/* Bearing - Bottom Right */}
+                        <div className="bg-raptor-lightgray border-2 border-raptor-yellow rounded-lg p-2">
+                          <div className="text-white font-bold text-xs">Bearing</div>
+                          <div className="text-xs text-slate-300">Status: LOCKED</div>
+                          <div className="text-xs text-slate-400 mt-1">Health</div>
+                          <div className="w-full bg-slate-700 rounded-full h-1.5">
+                            <div className="bg-raptor-yellow h-1.5 rounded-full" style={{ width: "45%" }} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right side - Metrics */}
+                  <div className="col-span-4 space-y-3">
+                    {/* Grain Metrics */}
+                    <div className="bg-raptor-lightgray rounded-lg p-3">
+                      <h4 className="text-white font-bold text-sm mb-2">Grain Metrics</h4>
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-400">Grain Type:</span>
+                          <span className="text-white font-bold">Corn</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-400">Moisture level:</span>
+                          <span className="text-white font-bold">15%</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-400">Temperature:</span>
+                          <span className="text-white font-bold">68°F</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-400">Grain Quality:</span>
+                          <span className="text-white font-bold">97%</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-400">Bin Capacity:</span>
+                          <span className="text-white font-bold">75%</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Flow & Volume Metrics */}
+                    <div className="bg-raptor-lightgray rounded-lg p-3">
+                      <h4 className="text-white font-bold text-sm mb-2">Flow & Volume Metrics</h4>
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-400">Current Flow Rate:</span>
+                          <span className="text-white font-bold">0 bu/hr</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-400">Target Flow Rate:</span>
+                          <span className="text-white font-bold">1,200 bu/hr</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-400">Volume Processed:</span>
+                          <span className="text-white font-bold">24,500 bu</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-400">Total Capacity:</span>
+                          <span className="text-white font-bold">35,000 bu</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-400">Flow Efficiency:</span>
+                          <span className="text-white font-bold">0%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
 
-            <div className="space-y-3">
-              {/* Grain Metrics */}
-              <Card className="bg-raptor-gray border-slate-700">
-                <CardHeader className="pb-1">
-                  <CardTitle className="text-white text-sm">
-                    Grain Metrics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-1.5 pt-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Grain Type:</span>
-                    <span className="text-white font-bold">Corn</span>
+              {/* Mobile Layout - Stacked */}
+              <div className="lg:hidden space-y-3">
+                {/* Sweep Image */}
+                <div className="relative flex justify-center items-center bg-raptor-dark/30 rounded-lg py-4">
+                  {isRunning ? (
+                    <video
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      preload="auto"
+                      className="max-h-[200px] object-contain pointer-events-none"
+                    >
+                      <source src="/sweep-animations/both/fast.webm" type="video/webm" />
+                      <source src="/sweep-animations/both/fast.mov" type="video/quicktime" />
+                    </video>
+                  ) : (
+                    <Image
+                      src="/raptor-240-stopped.png"
+                      alt="Sweep system stopped"
+                      width={300}
+                      height={200}
+                      className="max-h-[200px] object-contain"
+                    />
+                  )}
+                </div>
+
+                {/* Component Status Grid - Mobile */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
+                    <div className="text-white font-bold text-xs">Chain Drive</div>
+                    <div className="text-xs text-slate-300">LOCKED</div>
+                    <div className="w-full bg-slate-700 rounded-full h-1.5 mt-1">
+                      <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "85%" }} />
+                    </div>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Moisture level:</span>
-                    <span className="text-white font-bold">15%</span>
+                  <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
+                    <div className="text-white font-bold text-xs">Motor Drive #2</div>
+                    <div className="text-xs text-slate-300">LOCKED</div>
+                    <div className="w-full bg-slate-700 rounded-full h-1.5 mt-1">
+                      <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "92%" }} />
+                    </div>
                   </div>
+                  <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
+                    <div className="text-white font-bold text-xs">Motor Drive #1</div>
+                    <div className="text-xs text-slate-300">LOCKED</div>
+                    <div className="w-full bg-slate-700 rounded-full h-1.5 mt-1">
+                      <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "88%" }} />
+                    </div>
+                  </div>
+                  <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
+                    <div className="text-white font-bold text-xs">Paddle Chain</div>
+                    <div className="text-xs text-slate-300">LOCKED</div>
+                    <div className="w-full bg-slate-700 rounded-full h-1.5 mt-1">
+                      <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "78%" }} />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-raptor-lightgray border-2 border-raptor-yellow rounded-lg p-2">
+                  <div className="text-white font-bold text-xs">Bearing</div>
+                  <div className="text-xs text-slate-300">LOCKED</div>
+                  <div className="w-full bg-slate-700 rounded-full h-1.5 mt-1">
+                    <div className="bg-raptor-yellow h-1.5 rounded-full" style={{ width: "45%" }} />
+                  </div>
+                </div>
+
+                {/* Mobile Metrics */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-raptor-lightgray rounded-lg p-2">
+                    <h4 className="text-white font-bold text-xs mb-1">Grain Metrics</h4>
+                    <div className="space-y-0.5 text-[10px]">
+                      <div className="flex justify-between"><span className="text-slate-400">Type:</span><span className="text-white">Corn</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Moisture:</span><span className="text-white">15%</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Temp:</span><span className="text-white">68°F</span></div>
+                    </div>
+                  </div>
+                  <div className="bg-raptor-lightgray rounded-lg p-2">
+                    <h4 className="text-white font-bold text-xs mb-1">Flow Metrics</h4>
+                    <div className="space-y-0.5 text-[10px]">
+                      <div className="flex justify-between"><span className="text-slate-400">Flow:</span><span className="text-white">0 bu/hr</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Target:</span><span className="text-white">1,200</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Efficiency:</span><span className="text-white">0%</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Motor Drive #1 Detail Card */}
+          <Card className="bg-raptor-lightgray border-slate-600">
+            <CardHeader className="pb-1">
+              <CardTitle className="text-white text-sm">
+                Motor Drive #1
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-400">Temperature:</span>
-                    <span className="text-white font-bold">68°F</span>
+                    <span className="text-white">130°F</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Grain Quality:</span>
-                    <span className="text-white font-bold">97%</span>
+                    <span className="text-slate-400">Efficiency:</span>
+                    <span className="text-white">78%</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Bin Capacity:</span>
-                    <span className="text-white font-bold">75%</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Flow & Volume Metrics */}
-              <Card className="bg-raptor-gray border-slate-700">
-                <CardHeader className="pb-1">
-                  <CardTitle className="text-white text-sm">
-                    Flow & Volume Metrics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-1.5 pt-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Current Flow Rate:</span>
-                    <span className="text-white font-bold">0 bu/hr</span>
+                    <span className="text-slate-400">Vibration:</span>
+                    <span className="text-white">8.2 mm/s</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Target Flow Rate:</span>
-                    <span className="text-white font-bold">1,200 bu/hr</span>
+                    <span className="text-slate-400">Last Service:</span>
+                    <span className="text-white">6-10-2024</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Volume Processed:</span>
-                    <span className="text-white font-bold">24,500 bu</span>
+                    <span className="text-slate-400">Status:</span>
+                    <span className="text-red-400 font-bold">LOCKED</span>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Total Capacity:</span>
-                    <span className="text-white font-bold">35,000 bu</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Flow Efficiency:</span>
-                    <span className="text-white font-bold">0%</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+                </div>
+                <div className="flex items-center justify-center">
+                  {isRunning ? (
+                    <video
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      preload="auto"
+                      className="max-h-[120px] object-contain pointer-events-none"
+                    >
+                      <source src="/close-wheel.webm" type="video/webm" />
+                      <source src="/close-wheel.mov" type="video/quicktime" />
+                    </video>
+                  ) : (
+                    <Image
+                      src="/sweep_motor.png"
+                      alt="Motor stopped"
+                      width={200}
+                      height={120}
+                      className="max-h-[120px] object-contain"
+                    />
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <Card className="bg-raptor-gray border-slate-700">
             <CardHeader className="pb-2">
