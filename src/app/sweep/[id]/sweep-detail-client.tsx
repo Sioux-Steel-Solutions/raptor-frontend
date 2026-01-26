@@ -849,9 +849,10 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
             <CardContent>
               {/* Desktop Layout - Matches design exactly */}
               <div className="hidden lg:grid lg:grid-cols-12 gap-4">
-                {/* Left side - Sweep with positioned labels (7 cols) */}
-                <div className="col-span-7">
-                  <div className="relative min-h-[450px]">
+                {/* Left side - Sweep with positioned labels + Detail view (7 cols) */}
+                <div className="col-span-7 space-y-4">
+                  {/* Sweep Diagram */}
+                  <div className="relative min-h-[400px]">
                     {/* SVG Connector Lines */}
                     <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" style={{ overflow: 'visible' }}>
                       {/* Chain Drive line - from bottom-right of label to top-left of sweep */}
@@ -987,6 +988,62 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                             className="h-[280px] w-auto object-contain"
                           />
                         )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Selected Component Detail - Inside left column, below diagram */}
+                  <div className={`flex gap-3 bg-raptor-lightgray rounded-lg p-3 border-2 ${componentDetails[selectedComponent].borderColor}`}>
+                    {/* Component Image */}
+                    <div className="w-1/3 flex items-center justify-center">
+                      {isRunning ? (
+                        <video
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          preload="auto"
+                          className="max-h-[120px] object-contain pointer-events-none"
+                        >
+                          <source src="/close-wheel.webm" type="video/webm" />
+                          <source src="/close-wheel.mov" type="video/quicktime" />
+                        </video>
+                      ) : (
+                        <Image
+                          src="/sweep_motor.png"
+                          alt={`${componentDetails[selectedComponent].name}`}
+                          width={150}
+                          height={120}
+                          className="max-h-[120px] object-contain"
+                        />
+                      )}
+                    </div>
+                    {/* Component Stats */}
+                    <div className="w-2/3">
+                      <h4 className="text-white font-bold text-sm mb-2">{componentDetails[selectedComponent].name}</h4>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Temperature:</span>
+                          <span className="text-white font-bold">{componentDetails[selectedComponent].temperature}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Vibration:</span>
+                          <span className="text-white font-bold">{componentDetails[selectedComponent].vibration}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Efficiency:</span>
+                          <span className="text-white font-bold">{componentDetails[selectedComponent].efficiency}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Last Service:</span>
+                          <span className="text-white font-bold">{componentDetails[selectedComponent].lastService}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Status:</span>
+                          <span className={`font-bold ${componentDetails[selectedComponent].statusColor}`}>
+                            {componentDetails[selectedComponent].status}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1208,86 +1265,6 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
               </div>
             </CardContent>
           </Card>
-
-          {/* Selected Component Detail Section - Image left, Stats right */}
-          <div className={`flex flex-col sm:flex-row gap-4 items-stretch border-2 rounded-lg ${componentDetails[selectedComponent].borderColor}`}>
-            {/* Component Image */}
-            <div className="sm:w-1/3 flex items-center justify-center bg-raptor-gray rounded-lg p-4">
-              {isRunning ? (
-                <video
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  preload="auto"
-                  className="max-h-[160px] object-contain pointer-events-none"
-                >
-                  <source src="/close-wheel.webm" type="video/webm" />
-                  <source src="/close-wheel.mov" type="video/quicktime" />
-                </video>
-              ) : (
-                <Image
-                  src="/sweep_motor.png"
-                  alt={`${componentDetails[selectedComponent].name} stopped`}
-                  width={200}
-                  height={160}
-                  className="max-h-[160px] object-contain"
-                />
-              )}
-            </div>
-            {/* Component Stats */}
-            <div className="sm:w-2/3 bg-raptor-gray rounded-lg p-4">
-              <h4 className="text-white font-bold text-base mb-3">{componentDetails[selectedComponent].name}</h4>
-              <div className="grid grid-cols-2 gap-x-8 gap-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Temperature:</span>
-                  <span className="text-white font-bold">{componentDetails[selectedComponent].temperature}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Vibration:</span>
-                  <span className="text-white font-bold">{componentDetails[selectedComponent].vibration}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Efficiency:</span>
-                  <span className="text-white font-bold">{componentDetails[selectedComponent].efficiency}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Last Service:</span>
-                  <span className="text-white font-bold">{componentDetails[selectedComponent].lastService}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Hours Left:</span>
-                  <span className={selectedComponent === "bearing" ? "text-raptor-yellow font-bold" : "text-white font-bold"}>
-                    {componentDetails[selectedComponent].hoursLeft}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Status:</span>
-                  <span className={`font-bold ${componentDetails[selectedComponent].statusColor}`}>
-                    {componentDetails[selectedComponent].status}
-                  </span>
-                </div>
-              </div>
-              {/* Health bar */}
-              <div className="mt-3">
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-400">Health</span>
-                  <span className={selectedComponent === "bearing" ? "text-raptor-yellow" : "text-green-400"}>
-                    {componentDetails[selectedComponent].healthPercent}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-700 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full ${selectedComponent === "bearing" ? "bg-raptor-yellow" : "bg-green-500"}`}
-                    style={{ width: `${componentDetails[selectedComponent].healthPercent}%` }}
-                  />
-                </div>
-                {selectedComponent === "bearing" && (
-                  <div className="text-raptor-yellow text-xs mt-1">⚠ High wear detected - schedule maintenance</div>
-                )}
-              </div>
-            </div>
-          </div>
 
           {/* Bottom Row: Active Programs | AI Insights | Quick Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
