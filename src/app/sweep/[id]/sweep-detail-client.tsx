@@ -1,4 +1,4 @@
-// Client component for auger detail page
+// Client component for sweep detail page
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -30,12 +30,12 @@ const LayoutWrapper = dynamic(
   () => import("@/components/layout-wrapper").then((m) => m.LayoutWrapper),
   { ssr: false }
 );
-import { mockAugerData } from "@/lib/mock-data";
+import { mockSweepData } from "@/lib/mock-data";
 
 // Network-aware MQTT (auto-switches between local/cloud based on connectivity)
 import { useNetworkAwareMqtt } from "@/lib/use-network-aware-mqtt";
 
-interface AugerDetailProps {
+interface SweepDetailProps {
   id: string;
   defaultTab?: "controls" | "overview";
 }
@@ -49,7 +49,7 @@ interface VFDTelemetry {
   drive_state: number;
 }
 
-export function AugerDetailClient({ id, defaultTab = "controls" }: AugerDetailProps) {
+export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailProps) {
   // Tab state for Controls vs Overview
   const [activeTab, setActiveTab] = useState<"controls" | "overview">(defaultTab);
 
@@ -58,7 +58,7 @@ export function AugerDetailClient({ id, defaultTab = "controls" }: AugerDetailPr
   const [highLoadActive, setHighLoadActive] = useState(false);
 
   const [isRunning, setIsRunning] = useState(false);
-  const [augerPosition, setAugerPosition] = useState(0);
+  const [sweepPosition, setSweepPosition] = useState(0);
   const [operatingHours, setOperatingHours] = useState(1247.5);
 
   // Per-VFD telemetry (NEW - replaces fake temperature/humidity/chainRpm)
@@ -164,15 +164,15 @@ export function AugerDetailClient({ id, defaultTab = "controls" }: AugerDetailPr
   const lastTsRef = useRef<number | null>(null);
   const SWEEP_RATE_DEG_PER_SEC = 2; // matches UI label
 
-  const auger = mockAugerData.find((a) => a.id === id);
+  const sweep = mockSweepData.find((s) => s.id === id);
 
   useEffect(() => {
-    if (auger) {
-      setAugerPosition(auger.position);
-      setAngleRaw(auger.position); // seed the continuous angle from initial position
-      setIsRunning(auger.isRunning);
+    if (sweep) {
+      setSweepPosition(sweep.position);
+      setAngleRaw(sweep.position); // seed the continuous angle from initial position
+      setIsRunning(sweep.isRunning);
     }
-  }, [auger]);
+  }, [sweep]);
 
 
   // helper to publish start/stop commands with debouncing
@@ -290,10 +290,10 @@ export function AugerDetailClient({ id, defaultTab = "controls" }: AugerDetailPr
     };
   }, [isRunning]);
 
-  // keep displayed augerPosition (0–359) in sync with continuous angle
+  // keep displayed sweepPosition (0–359) in sync with continuous angle
   useEffect(() => {
     const normalized = ((angleRaw % 360) + 360) % 360;
-    setAugerPosition(normalized);
+    setSweepPosition(normalized);
   }, [angleRaw]);
 
   // operating hours update loop
@@ -326,15 +326,15 @@ export function AugerDetailClient({ id, defaultTab = "controls" }: AugerDetailPr
     return isRunning ? "RUNNING" : "STOPPED";
   };
 
-  if (!auger) {
+  if (!sweep) {
     return (
       <LayoutWrapper>
         <div className="text-center py-16">
           <h1 className="text-2xl font-bold text-white mb-4">
-            Auger Not Found
+            Sweep Not Found
           </h1>
           <p className="text-slate-400 mb-6">
-            The requested auger could not be found.
+            The requested sweep could not be found.
           </p>
           <Link href="/dashboard">
             <Button className="bg-orange-600 hover:bg-orange-700">
@@ -387,10 +387,10 @@ export function AugerDetailClient({ id, defaultTab = "controls" }: AugerDetailPr
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-yellow-400">
-                {auger.name}
+                {sweep.name}
               </h1>
               <p className="text-slate-400 text-sm">
-                {id} | {auger.zone}
+                {id} | {sweep.zone}
               </p>
             </div>
           </div>
@@ -544,7 +544,7 @@ export function AugerDetailClient({ id, defaultTab = "controls" }: AugerDetailPr
           </Card>
 
           <div className="grid grid-cols-1 lg:grid-cols-1 items-start gap-5">
-            {/* Auger Position */}
+            {/* Sweep Position */}
             <Card className="bg-raptor-gray border-slate-700">
               <CardHeader className="pb-3">
                 <CardTitle className="text-white flex items-center gap-2">
@@ -590,7 +590,7 @@ export function AugerDetailClient({ id, defaultTab = "controls" }: AugerDetailPr
                     {/* LEFT: angle + label */}
                     <div className="text-center">
                       <div className="text-2xl font-mono font-bold text-white">
-                        {augerPosition.toFixed(0)}°
+                        {sweepPosition.toFixed(0)}°
                       </div>
                       <div className="text-xs text-slate-400">
                         POSITION

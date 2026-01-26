@@ -4,10 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Grid3X3, List, Map } from "lucide-react";
 import { LayoutWrapper } from "@/components/layout-wrapper";
-import { mockAugerData, type AugerData } from "@/lib/mock-data";
+import { mockSweepData, type SweepData } from "@/lib/mock-data";
 
-function ListView({ augers }: { augers: AugerData[] }) {
-  const getStatusColor = (status: AugerData["status"]) => {
+function ListView({ sweeps }: { sweeps: SweepData[] }) {
+  const getStatusColor = (status: SweepData["status"]) => {
     switch (status) {
       case "optimal":
         return "text-green-400";
@@ -20,7 +20,7 @@ function ListView({ augers }: { augers: AugerData[] }) {
     }
   };
 
-  const getStatusText = (status: AugerData["status"]) => {
+  const getStatusText = (status: SweepData["status"]) => {
     switch (status) {
       case "optimal":
         return "OPTIMAL";
@@ -68,54 +68,54 @@ function ListView({ augers }: { augers: AugerData[] }) {
                 </tr>
               </thead>
               <tbody>
-                {augers.map((auger) => (
+                {sweeps.map((sweep) => (
                   <tr
-                    key={auger.id}
+                    key={sweep.id}
                     className="border-b border-slate-700 hover:bg-raptor-lightgray cursor-pointer transition-colors"
                     onClick={() =>
-                      (window.location.href = `/auger/${auger.id}`)
+                      (window.location.href = `/sweep/${sweep.id}`)
                     }
                   >
                     <td className="p-4">
                       <div className="text-white font-mono font-bold">
-                        {auger.id}
+                        {sweep.id}
                       </div>
                     </td>
                     <td className="p-4">
-                      <div className="text-slate-300">{auger.zone}</div>
+                      <div className="text-slate-300">{sweep.zone}</div>
                     </td>
                     <td className="p-4">
                       <div
                         className={`font-medium ${getStatusColor(
-                          auger.status
+                          sweep.status
                         )}`}
                       >
-                        {getStatusText(auger.status)}
+                        {getStatusText(sweep.status)}
                       </div>
                     </td>
                     <td className="p-4">
                       <div className="text-white font-mono">
-                        {auger.position}°
+                        {sweep.position}°
                       </div>
                     </td>
                     <td className="p-4">
                       <div className="text-white font-mono">
-                        {auger.throughput.toFixed(1)} t/hr
+                        {sweep.throughput.toFixed(1)} t/hr
                       </div>
                     </td>
                     <td className="p-4">
                       <div className="text-white font-mono">
-                        {auger.targetThroughput.toFixed(1)} t/hr
+                        {sweep.targetThroughput.toFixed(1)} t/hr
                       </div>
                     </td>
                     <td className="p-4">
                       <div className="text-white font-mono">
-                        {auger.temperature.toFixed(1)}°F
+                        {sweep.temperature.toFixed(1)}°F
                       </div>
                     </td>
                     <td className="p-4">
                       <div className="text-white font-mono">
-                        {auger.humidity.toFixed(1)}%
+                        {sweep.humidity.toFixed(1)}%
                       </div>
                     </td>
                   </tr>
@@ -129,38 +129,38 @@ function ListView({ augers }: { augers: AugerData[] }) {
   );
 }
 
-function MapView({ augers }: { augers: AugerData[] }) {
+function MapView({ sweeps }: { sweeps: SweepData[] }) {
   // Mock geographical locations for demonstration
   const locations = [
     {
       name: "Iowa Facility",
       lat: 42.0,
       lng: -93.5,
-      augers: augers.slice(0, 8),
+      sweeps: sweeps.slice(0, 8),
     },
     {
       name: "Nebraska Plant",
       lat: 41.5,
       lng: -99.9,
-      augers: augers.slice(8, 16),
+      sweeps: sweeps.slice(8, 16),
     },
     {
       name: "Kansas Site",
       lat: 38.5,
       lng: -98.0,
-      augers: augers.slice(16, 24),
+      sweeps: sweeps.slice(16, 24),
     },
   ];
 
-  const getHotspotSize = (augerCount: number) => {
-    if (augerCount >= 8) return "w-8 h-8";
-    if (augerCount >= 4) return "w-6 h-6";
+  const getHotspotSize = (sweepCount: number) => {
+    if (sweepCount >= 8) return "w-8 h-8";
+    if (sweepCount >= 4) return "w-6 h-6";
     return "w-4 h-4";
   };
 
-  const getHotspotIntensity = (augers: AugerData[]) => {
-    const runningCount = augers.filter((a) => a.isRunning).length;
-    const percentage = runningCount / augers.length;
+  const getHotspotIntensity = (sweeps: SweepData[]) => {
+    const runningCount = sweeps.filter((s) => s.isRunning).length;
+    const percentage = runningCount / sweeps.length;
     if (percentage >= 0.8) return "bg-green-500";
     if (percentage >= 0.5) return "bg-raptor-yellow";
     return "bg-red-500";
@@ -207,29 +207,29 @@ function MapView({ augers }: { augers: AugerData[] }) {
                 {/* Hotspot Circle */}
                 <div
                   className={`${getHotspotSize(
-                    location.augers.length
+                    location.sweeps.length
                   )} ${getHotspotIntensity(
-                    location.augers
+                    location.sweeps
                   )} rounded-full opacity-80 group-hover:opacity-100 transition-opacity flex items-center justify-center`}
                 >
                   <span className="text-white text-xs font-bold">
-                    {location.augers.length}
+                    {location.sweeps.length}
                   </span>
                 </div>
 
                 {/* Pulse Animation */}
                 <div
                   className={`absolute inset-0 ${getHotspotIntensity(
-                    location.augers
+                    location.sweeps
                   )} rounded-full animate-ping opacity-30`}
                 ></div>
 
                 {/* Tooltip */}
                 <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-raptor-lightgray text-white text-xs rounded px-2 py-1 whitespace-nowrap">
                   <div className="font-semibold">{location.name}</div>
-                  <div>{location.augers.length} Augers</div>
+                  <div>{location.sweeps.length} Sweeps</div>
                   <div>
-                    {location.augers.filter((a) => a.isRunning).length} Running
+                    {location.sweeps.filter((s) => s.isRunning).length} Running
                   </div>
                 </div>
               </div>
@@ -256,23 +256,23 @@ function MapView({ augers }: { augers: AugerData[] }) {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Total Augers:</span>
+                    <span className="text-slate-400">Total Sweeps:</span>
                     <span className="text-white font-mono">
-                      {location.augers.length}
+                      {location.sweeps.length}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Running:</span>
                     <span className="text-green-400 font-mono">
-                      {location.augers.filter((a) => a.isRunning).length}
+                      {location.sweeps.filter((s) => s.isRunning).length}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Alerts:</span>
                     <span className="text-yellow-400 font-mono">
                       {
-                        location.augers.filter(
-                          (a) => a.status === "warning" || a.status === "error"
+                        location.sweeps.filter(
+                          (s) => s.status === "warning" || s.status === "error"
                         ).length
                       }
                     </span>
@@ -281,10 +281,10 @@ function MapView({ augers }: { augers: AugerData[] }) {
                     <span className="text-slate-400">Avg Throughput:</span>
                     <span className="text-white font-mono">
                       {(
-                        location.augers.reduce(
-                          (sum, a) => sum + a.throughput,
+                        location.sweeps.reduce(
+                          (sum, s) => sum + s.throughput,
                           0
-                        ) / location.augers.length
+                        ) / location.sweeps.length
                       ).toFixed(1)}{" "}
                       t/hr
                     </span>
@@ -321,8 +321,8 @@ function MapView({ augers }: { augers: AugerData[] }) {
   );
 }
 
-function GridOverview({ augers }: { augers: AugerData[] }) {
-  const getStatusColor = (status: AugerData["status"]) => {
+function GridOverview({ sweeps }: { sweeps: SweepData[] }) {
+  const getStatusColor = (status: SweepData["status"]) => {
     switch (status) {
       case "optimal":
         return "bg-green-500";
@@ -335,7 +335,7 @@ function GridOverview({ augers }: { augers: AugerData[] }) {
     }
   };
 
-  const getStatusText = (status: AugerData["status"]) => {
+  const getStatusText = (status: SweepData["status"]) => {
     switch (status) {
       case "optimal":
         return "OPTIMAL";
@@ -348,9 +348,9 @@ function GridOverview({ augers }: { augers: AugerData[] }) {
     }
   };
 
-  const runningCount = augers.filter((a) => a.isRunning).length;
-  const warningCount = augers.filter(
-    (a) => a.status === "warning" || a.status === "error"
+  const runningCount = sweeps.filter((s) => s.isRunning).length;
+  const warningCount = sweeps.filter(
+    (s) => s.status === "warning" || s.status === "error"
   ).length;
 
   return (
@@ -360,10 +360,10 @@ function GridOverview({ augers }: { augers: AugerData[] }) {
         <Card className="bg-raptor-gray border-slate-700">
           <CardContent className="p-3 sm:p-4">
             <div className="text-xl sm:text-2xl font-bold text-white leading-none">
-              {augers.length}
+              {sweeps.length}
             </div>
             <div className="text-xs sm:text-sm text-slate-400">
-              Total Augers
+              Total Sweeps
             </div>
           </CardContent>
         </Card>
@@ -386,33 +386,33 @@ function GridOverview({ augers }: { augers: AugerData[] }) {
         <Card className="bg-raptor-gray border-slate-700">
           <CardContent className="p-3 sm:p-4">
             <div className="text-xl sm:text-2xl font-bold text-slate-300">
-              {augers.length - runningCount}
+              {sweeps.length - runningCount}
             </div>
             <div className="text-xs sm:text-sm text-slate-400">Stopped</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Auger Grid */}
+      {/* Sweep Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {augers.map((auger) => (
+        {sweeps.map((sweep) => (
           <Card
-            key={auger.id}
+            key={sweep.id}
             className="bg-raptor-gray border-slate-700 hover:bg-slate-750 cursor-pointer transition-colors"
-            onClick={() => (window.location.href = `/auger/${auger.id}`)}
+            onClick={() => (window.location.href = `/sweep/${sweep.id}`)}
           >
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-white text-lg">{auger.id}</CardTitle>
+                <CardTitle className="text-white text-lg">{sweep.id}</CardTitle>
                 <Badge
                   className={`${getStatusColor(
-                    auger.status
+                    sweep.status
                   )} text-white border-0 text-xs`}
                 >
-                  {getStatusText(auger.status)}
+                  {getStatusText(sweep.status)}
                 </Badge>
               </div>
-              <p className="text-slate-400 text-sm">{auger.zone}</p>
+              <p className="text-slate-400 text-sm">{sweep.zone}</p>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Mini Position Display */}
@@ -426,7 +426,7 @@ function GridOverview({ augers }: { augers: AugerData[] }) {
                         height: "27px",
                         top: "50%",
                         left: "50%",
-                        transform: `translate(-50%, -100%) rotate(${auger.position}deg)`,
+                        transform: `translate(-50%, -100%) rotate(${sweep.position}deg)`,
                         transformOrigin: "50% 100%",
                       }}
                     />
@@ -435,7 +435,7 @@ function GridOverview({ augers }: { augers: AugerData[] }) {
                 </div>
                 <div className="ml-3 text-center">
                   <div className="text-lg font-mono text-white">
-                    {auger.position}°
+                    {sweep.position}°
                   </div>
                   <div className="text-xs text-slate-400">Position</div>
                 </div>
@@ -445,25 +445,25 @@ function GridOverview({ augers }: { augers: AugerData[] }) {
                 <div>
                   <div className="text-slate-400">Throughput</div>
                   <div className="text-white font-mono">
-                    {auger.throughput.toFixed(0)} t/hr
+                    {sweep.throughput.toFixed(0)} t/hr
                   </div>
                 </div>
                 <div>
                   <div className="text-slate-400">Target</div>
                   <div className="text-white font-mono">
-                    {auger.targetThroughput.toFixed(0)} t/hr
+                    {sweep.targetThroughput.toFixed(0)} t/hr
                   </div>
                 </div>
                 <div>
                   <div className="text-slate-400">Temp</div>
                   <div className="text-white font-mono">
-                    {auger.temperature.toFixed(1)}°F
+                    {sweep.temperature.toFixed(1)}°F
                   </div>
                 </div>
                 <div>
                   <div className="text-slate-400">Humidity</div>
                   <div className="text-white font-mono">
-                    {auger.humidity.toFixed(1)}%
+                    {sweep.humidity.toFixed(1)}%
                   </div>
                 </div>
               </div>
@@ -476,7 +476,7 @@ function GridOverview({ augers }: { augers: AugerData[] }) {
 }
 
 export default function DashboardPage() {
-  const [augers] = useState<AugerData[]>(mockAugerData);
+  const [sweeps] = useState<SweepData[]>(mockSweepData);
   const [viewMode, setViewMode] = useState<"grid" | "list" | "map">("grid");
 
   return (
@@ -539,9 +539,9 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
-        {viewMode === "grid" && <GridOverview augers={augers} />}
-        {viewMode === "list" && <ListView augers={augers} />}
-        {viewMode === "map" && <MapView augers={augers} />}
+        {viewMode === "grid" && <GridOverview sweeps={sweeps} />}
+        {viewMode === "list" && <ListView sweeps={sweeps} />}
+        {viewMode === "map" && <MapView sweeps={sweeps} />}
       </div>
     </LayoutWrapper>
   );

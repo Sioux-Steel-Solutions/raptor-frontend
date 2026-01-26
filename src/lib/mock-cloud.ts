@@ -1,4 +1,4 @@
-export interface AugerData {
+export interface SweepData {
   id: string;
   name: string;
   zone: string;
@@ -12,7 +12,7 @@ export interface AugerData {
 }
 
 // Hardcoded mock data to prevent hydration issues
-export const mockAugerData: AugerData[] = [
+export const mockSweepData: SweepData[] = [
   {
     id: "SA-001",
     name: "Raptor Sweep 1",

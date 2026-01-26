@@ -170,7 +170,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
             const isActive =
               pathname === item.href ||
               (item.href !== "/dashboard" && pathname.startsWith(item.href + "/")) ||
-              (item.href === "/dashboard" && pathname.startsWith("/auger"));
+              (item.href === "/dashboard" && pathname.startsWith("/sweep"));
 
             return (
               <li key={idx}>

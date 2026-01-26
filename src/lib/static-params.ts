@@ -1,8 +1,8 @@
-import { mockAugerData } from "./mock-data";
+import { mockSweepData } from "./mock-data";
 
-// Generate static params for auger pages (used in static export)
-export function getAugerStaticParams() {
-  return mockAugerData.map((auger) => ({
-    id: auger.id,
+// Generate static params for sweep pages (used in static export)
+export function getSweepStaticParams() {
+  return mockSweepData.map((sweep) => ({
+    id: sweep.id,
   }));
 }

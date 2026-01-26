@@ -33,7 +33,7 @@ export function BottomNav() {
         {navItems.map((item, idx) => {
           const isActive =
             pathname === item.href ||
-            (item.href === "/dashboard" && pathname.startsWith("/auger"));
+            (item.href === "/dashboard" && pathname.startsWith("/sweep"));
 
           return (
             <Link
