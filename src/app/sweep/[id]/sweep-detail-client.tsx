@@ -146,6 +146,9 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
   const [sweepPosition, setSweepPosition] = useState(0);
   const [operatingHours, setOperatingHours] = useState(1247.5);
 
+  // Toggle between sweep position dial and camera feed
+  const [showCameraFeed, setShowCameraFeed] = useState(false);
+
   // Per-VFD telemetry (NEW - replaces fake temperature/humidity/chainRpm)
   const [chainTelemetry, setChainTelemetry] = useState<VFDTelemetry | null>(null);
   const [innerWheelTelemetry, setInnerWheelTelemetry] = useState<VFDTelemetry | null>(null);
@@ -629,76 +632,116 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
           </Card>
 
           <div className="grid grid-cols-1 lg:grid-cols-1 items-start gap-5">
-            {/* Sweep Position */}
+            {/* Sweep Position / Camera Feed */}
             <Card className="bg-raptor-gray border-slate-700">
               <CardHeader className="pb-3">
-                <CardTitle className="text-white flex items-center gap-2">
-                  <RotateCw className="w-5 h-5" />
-                  Sweep Position
+                <CardTitle className="text-white flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <RotateCw className="w-5 h-5" />
+                    {showCameraFeed ? "Camera Feed" : "Sweep Position"}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCameraFeed(!showCameraFeed)}
+                    className="bg-raptor-lightgray border-slate-600 text-white hover:bg-slate-600 text-xs h-7 px-2"
+                  >
+                    {showCameraFeed ? "Position" : "Camera"}
+                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col items-center py-4">
-                <div className="relative w-40 h-40 sm:w-52 sm:h-52 mb-4">
-                  <div className="absolute inset-3 rounded-full border-4 border-raptor-yellow bg-raptor-gray" />
-                  <div className="absolute inset-0">
-                    {/* markers at 0, 90, 180, 270 */}
-                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-white text-sm">
-                      N
-                    </span>
-                    <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-white text-sm">
-                      S
-                    </span>
-                    <span className="absolute top-1/2 -left-2 -translate-y-1/2 text-white text-sm">
-                      W
-                    </span>
-                    <span className="absolute top-1/2 -right-2 -translate-y-1/2 text-white text-sm">
-                      E
-                    </span>
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div
-                      className="absolute w-1 bg-raptor-yellow rounded-full transition-transform duration-100"
-                      style={{
-                        height: "85px",
-                        top: "50%",
-                        left: "50%",
-                        transform: `translate(-50%, -100%) rotate(${angleRaw}deg)`,
-                        transformOrigin: "50% 100%",
-                      }}
-                    />
-                  </div>
-                  <div className="absolute top-1/2 left-1/2 w-3 h-3 bg-raptor-yellow rounded-full transform -translate-x-1/2 -translate-y-1/2 border-2 border-raptor-yellow z-10" />
-                </div>
-
-                <div className="bg-raptor-lightgray rounded-lg px-4 py-3 w-full max-w-[240px]">
-                  <div className="flex justify-between items-center gap-4">
-                    {/* LEFT: angle + label */}
-                    <div className="text-center">
-                      <div className="text-2xl font-mono font-bold text-white">
-                        {sweepPosition.toFixed(0)}°
-                      </div>
-                      <div className="text-xs text-slate-400">
-                        POSITION
+                {showCameraFeed ? (
+                  <>
+                    <div className="relative w-40 h-40 sm:w-52 sm:h-52 mb-4 overflow-hidden rounded-lg">
+                      <img
+                        src="https://ptz-camera.tailc61a08.ts.net/?action=stream"
+                        alt="PTZ Camera Feed"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="bg-raptor-lightgray rounded-lg px-4 py-3 w-full max-w-[240px]">
+                      <div className="flex justify-between items-center gap-4">
+                        <div className="text-center">
+                          <div className="text-sm font-bold text-white">
+                            Live Feed
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            PTZ CAMERA
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                          <span className="text-xs text-green-400">LIVE</span>
+                        </div>
                       </div>
                     </div>
-
-                    {/* RIGHT: sweep rate + direction */}
-                    <div className="flex flex-col text-xs text-slate-300 items-center gap-1">
-                      <div className="text-center">
-                        <span className="text-slate-400">Rate </span>
-                        <span className="font-mono text-orange-400">
-                          {isRunning ? "2.0" : "0.0"}°/s
+                  </>
+                ) : (
+                  <>
+                    <div className="relative w-40 h-40 sm:w-52 sm:h-52 mb-4">
+                      <div className="absolute inset-3 rounded-full border-4 border-raptor-yellow bg-raptor-gray" />
+                      <div className="absolute inset-0">
+                        {/* markers at 0, 90, 180, 270 */}
+                        <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-white text-sm">
+                          N
+                        </span>
+                        <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-white text-sm">
+                          S
+                        </span>
+                        <span className="absolute top-1/2 -left-2 -translate-y-1/2 text-white text-sm">
+                          W
+                        </span>
+                        <span className="absolute top-1/2 -right-2 -translate-y-1/2 text-white text-sm">
+                          E
                         </span>
                       </div>
-                      <div className="text-center">
-                        <span className="text-slate-400">Dir </span>
-                        <span className={`font-mono ${wheelDirection === "fwd" ? "text-green-400" : "text-blue-400"}`}>
-                          {wheelDirection === "fwd" ? "CW" : "CCW"}
-                        </span>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div
+                          className="absolute w-1 bg-raptor-yellow rounded-full transition-transform duration-100"
+                          style={{
+                            height: "85px",
+                            top: "50%",
+                            left: "50%",
+                            transform: `translate(-50%, -100%) rotate(${angleRaw}deg)`,
+                            transformOrigin: "50% 100%",
+                          }}
+                        />
+                      </div>
+                      <div className="absolute top-1/2 left-1/2 w-3 h-3 bg-raptor-yellow rounded-full transform -translate-x-1/2 -translate-y-1/2 border-2 border-raptor-yellow z-10" />
+                    </div>
+
+                    <div className="bg-raptor-lightgray rounded-lg px-4 py-3 w-full max-w-[240px]">
+                      <div className="flex justify-between items-center gap-4">
+                        {/* LEFT: angle + label */}
+                        <div className="text-center">
+                          <div className="text-2xl font-mono font-bold text-white">
+                            {sweepPosition.toFixed(0)}°
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            POSITION
+                          </div>
+                        </div>
+
+                        {/* RIGHT: sweep rate + direction */}
+                        <div className="flex flex-col text-xs text-slate-300 items-center gap-1">
+                          <div className="text-center">
+                            <span className="text-slate-400">Rate </span>
+                            <span className="font-mono text-orange-400">
+                              {isRunning ? "2.0" : "0.0"}°/s
+                            </span>
+                          </div>
+                          <div className="text-center">
+                            <span className="text-slate-400">Dir </span>
+                            <span className={`font-mono ${wheelDirection === "fwd" ? "text-green-400" : "text-blue-400"}`}>
+                              {wheelDirection === "fwd" ? "CW" : "CCW"}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
