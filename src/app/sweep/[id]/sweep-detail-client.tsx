@@ -993,9 +993,9 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                   </div>
 
                   {/* Selected Component Detail - Inside left column, below diagram */}
-                  <div className={`flex gap-4 bg-raptor-lightgray rounded-lg p-4 border-2 min-h-[200px] ${componentDetails[selectedComponent].borderColor}`}>
-                    {/* Component Image - Larger */}
-                    <div className="w-1/2 flex items-center justify-center bg-raptor-dark/30 rounded-lg p-2">
+                  <div className={`flex gap-4 bg-raptor-lightgray rounded-lg p-3 border-2 ${componentDetails[selectedComponent].borderColor}`}>
+                    {/* Component Image */}
+                    <div className="flex items-center justify-center" style={{ width: '200px', height: '200px', flexShrink: 0 }}>
                       {isRunning ? (
                         <video
                           autoPlay
@@ -1003,18 +1003,16 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                           muted
                           playsInline
                           preload="auto"
-                          className="h-[180px] w-auto object-contain pointer-events-none"
+                          style={{ width: '200px', height: '200px', objectFit: 'contain' }}
                         >
                           <source src="/close-wheel.webm" type="video/webm" />
                           <source src="/close-wheel.mov" type="video/quicktime" />
                         </video>
                       ) : (
-                        <Image
+                        <img
                           src="/sweep_motor.png"
                           alt={`${componentDetails[selectedComponent].name}`}
-                          width={250}
-                          height={180}
-                          className="h-[180px] w-auto object-contain"
+                          style={{ width: '200px', height: '200px', objectFit: 'contain' }}
                         />
                       )}
                     </div>
@@ -1206,42 +1204,111 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                   )}
                 </div>
 
-                {/* Component Status Grid - Mobile */}
+                {/* Component Status Grid - Mobile (Clickable) */}
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
+                  <button
+                    onClick={() => setSelectedComponent("chain")}
+                    className={`bg-raptor-lightgray border-2 rounded-lg p-2 text-left transition-all ${
+                      selectedComponent === "chain" ? "border-white ring-1 ring-white/50" : "border-green-500"
+                    }`}
+                  >
                     <div className="text-white font-bold text-xs">Chain Drive</div>
                     <div className="text-xs text-slate-300">LOCKED</div>
                     <div className="w-full bg-slate-700 rounded-full h-1.5 mt-1">
                       <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "85%" }} />
                     </div>
-                  </div>
-                  <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
+                  </button>
+                  <button
+                    onClick={() => setSelectedComponent("motor2")}
+                    className={`bg-raptor-lightgray border-2 rounded-lg p-2 text-left transition-all ${
+                      selectedComponent === "motor2" ? "border-white ring-1 ring-white/50" : "border-green-500"
+                    }`}
+                  >
                     <div className="text-white font-bold text-xs">Motor Drive #2</div>
                     <div className="text-xs text-slate-300">LOCKED</div>
                     <div className="w-full bg-slate-700 rounded-full h-1.5 mt-1">
                       <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "92%" }} />
                     </div>
-                  </div>
-                  <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
+                  </button>
+                  <button
+                    onClick={() => setSelectedComponent("motor1")}
+                    className={`bg-raptor-lightgray border-2 rounded-lg p-2 text-left transition-all ${
+                      selectedComponent === "motor1" ? "border-white ring-1 ring-white/50" : "border-green-500"
+                    }`}
+                  >
                     <div className="text-white font-bold text-xs">Motor Drive #1</div>
                     <div className="text-xs text-slate-300">LOCKED</div>
                     <div className="w-full bg-slate-700 rounded-full h-1.5 mt-1">
                       <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "88%" }} />
                     </div>
-                  </div>
-                  <div className="bg-raptor-lightgray border-2 border-green-500 rounded-lg p-2">
+                  </button>
+                  <button
+                    onClick={() => setSelectedComponent("paddle")}
+                    className={`bg-raptor-lightgray border-2 rounded-lg p-2 text-left transition-all ${
+                      selectedComponent === "paddle" ? "border-white ring-1 ring-white/50" : "border-green-500"
+                    }`}
+                  >
                     <div className="text-white font-bold text-xs">Paddle Chain</div>
                     <div className="text-xs text-slate-300">LOCKED</div>
                     <div className="w-full bg-slate-700 rounded-full h-1.5 mt-1">
                       <div className="bg-green-500 h-1.5 rounded-full" style={{ width: "78%" }} />
                     </div>
-                  </div>
+                  </button>
                 </div>
-                <div className="bg-raptor-lightgray border-2 border-raptor-yellow rounded-lg p-2">
+                <button
+                  onClick={() => setSelectedComponent("bearing")}
+                  className={`w-full bg-raptor-lightgray border-2 rounded-lg p-2 text-left transition-all ${
+                    selectedComponent === "bearing" ? "border-white ring-1 ring-white/50" : "border-raptor-yellow"
+                  }`}
+                >
                   <div className="text-white font-bold text-xs">Bearing</div>
                   <div className="text-xs text-slate-300">LOCKED</div>
                   <div className="w-full bg-slate-700 rounded-full h-1.5 mt-1">
                     <div className="bg-raptor-yellow h-1.5 rounded-full" style={{ width: "45%" }} />
+                  </div>
+                </button>
+
+                {/* Selected Component Detail - Mobile */}
+                <div className={`flex gap-3 bg-raptor-lightgray rounded-lg p-3 border-2 ${componentDetails[selectedComponent].borderColor}`}>
+                  <div className="flex items-center justify-center" style={{ width: '120px', height: '120px', flexShrink: 0 }}>
+                    {isRunning ? (
+                      <video
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        preload="auto"
+                        style={{ width: '120px', height: '120px', objectFit: 'contain' }}
+                      >
+                        <source src="/close-wheel.webm" type="video/webm" />
+                        <source src="/close-wheel.mov" type="video/quicktime" />
+                      </video>
+                    ) : (
+                      <img
+                        src="/sweep_motor.png"
+                        alt={componentDetails[selectedComponent].name}
+                        style={{ width: '120px', height: '120px', objectFit: 'contain' }}
+                      />
+                    )}
+                  </div>
+                  <div className="flex-1 flex flex-col justify-center">
+                    <h4 className="text-white font-bold text-sm mb-2">{componentDetails[selectedComponent].name}</h4>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Temp:</span>
+                        <span className="text-white font-bold">{componentDetails[selectedComponent].temperature}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Efficiency:</span>
+                        <span className="text-white font-bold">{componentDetails[selectedComponent].efficiency}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Status:</span>
+                        <span className={`font-bold ${componentDetails[selectedComponent].statusColor}`}>
+                          {componentDetails[selectedComponent].status}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
