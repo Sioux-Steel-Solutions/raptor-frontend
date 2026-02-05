@@ -33,7 +33,7 @@ const LayoutWrapper = dynamic(
 import { mockSweepData } from "@/lib/mock-data";
 
 // Network-aware MQTT (auto-switches between local/cloud based on connectivity)
-import { useNetworkAwareMqtt } from "@/lib/use-network-aware-mqtt";
+import { useNetworkAwareMqtt } from "@/lib/use-network-aware-mqtt-web";
 
 interface SweepDetailProps {
   id: string;

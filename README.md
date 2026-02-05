@@ -1,37 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Raptor Monorepo
 
-## Getting Started
+Multi-platform grain bin sweep control system with web and mobile interfaces.
 
-First, run the development server:
+## Structure
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+raptor-monorepo/
+├── apps/
+│   ├── web/              # Next.js web app (Vercel + Pi nginx)
+│   └── mobile/           # Expo mobile app (iOS/Android)
+└── packages/
+    ├── mqtt/             # Shared MQTT logic
+    ├── types/            # Shared TypeScript types
+    └── utils/            # Shared utilities
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Deployments
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 1. Vercel (Cloud/Remote Access)
+```bash
+git push origin main  # Auto-deploys to https://raptor.vercel.app
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 2. Raspberry Pi (Local HMI)
+```bash
+npm run deploy:pi
+# Deploys to raptor3 via nginx on port 80
+```
 
-## Learn More
+### 3. Mobile Apps
+```bash
+cd apps/mobile
+eas build --platform ios
+eas build --platform android
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Development
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+# Install all dependencies
+npm install
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Run web app
+npm run dev:web
 
-## Deploy on Vercel
+# Run mobile app
+npm run dev:mobile
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Build for Pi
+npm run build:local
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Clean all
+npm run clean
+```
 
+## MQTT Architecture
+
+- **Local Broker**: `ws://localhost:9002` (Pi only)
+- **Cloud Broker**: `wss://3-141-116-27.sslip.io:9443` (remote access)
+- **Topics**: `raptor/{site}/{device}/state|cmd|status|faults`
+
+See `apps/web/docs/MQTT-ARCHITECTURE.md` for details.

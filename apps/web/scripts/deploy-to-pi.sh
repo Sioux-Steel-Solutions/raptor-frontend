@@ -1,6 +1,7 @@
 #!/bin/bash
 # Deploy raptor-frontend static build to Raspberry Pi
-# Usage: ./scripts/deploy-to-pi.sh [pi-hostname]
+# Usage: ./apps/web/scripts/deploy-to-pi.sh [pi-hostname]
+#        OR from root: npm run deploy:pi
 #
 # This deploys the static build and sets up:
 # - nginx to serve the frontend on port 80
@@ -12,16 +13,27 @@
 
 set -e
 
+# Detect if running from monorepo root or apps/web
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ "$SCRIPT_DIR" == */apps/web/scripts ]]; then
+    # Running from apps/web/scripts/
+    WEB_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+else
+    # Assume running from root
+    WEB_DIR="$(pwd)/apps/web"
+fi
+
 PI_HOST="${1:-raptor3}"
 PI_USER="pi"
 PI_DEST="/home/pi/raptor-frontend"
 PI_PASS="${PI_PASS:-b8rqse}"
 
 echo "=== Deploying raptor-frontend to $PI_HOST ==="
+echo "Web directory: $WEB_DIR"
 
 # Check if out/ directory exists
-if [ ! -d "out" ]; then
-    echo "Error: 'out/' directory not found. Run 'npm run build:local' first."
+if [ ! -d "$WEB_DIR/out" ]; then
+    echo "Error: '$WEB_DIR/out/' directory not found. Run 'npm run build:local' first."
     exit 1
 fi
 
@@ -37,7 +49,7 @@ echo "1. Creating destination directory on Pi..."
 eval $SSH_CMD "$PI_USER@$PI_HOST" "mkdir -p $PI_DEST"
 
 echo "2. Syncing static files to Pi..."
-eval $RSYNC_CMD -avz --delete out/ "$PI_USER@$PI_HOST:$PI_DEST/"
+eval $RSYNC_CMD -avz --delete "$WEB_DIR/out/" "$PI_USER@$PI_HOST:$PI_DEST/"
 
 echo "3. Setting up nginx config..."
 eval $SSH_CMD "$PI_USER@$PI_HOST" "cat > /tmp/raptor-frontend.nginx << 'NGINXEOF'
