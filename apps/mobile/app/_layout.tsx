@@ -1,24 +1,12 @@
-import { Stack } from 'expo-router';
+import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { View } from 'react-native';
 
 export default function RootLayout() {
   return (
-    <>
+    <View style={{ flex: 1, backgroundColor: '#09090b' }}>
       <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerStyle: {
-            backgroundColor: '#09090b',
-          },
-          headerTintColor: '#fff',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
-        }}
-      >
-        <Stack.Screen name="index" options={{ title: 'Raptor Control' }} />
-        <Stack.Screen name="dashboard" options={{ title: 'Dashboard' }} />
-      </Stack>
-    </>
+      <Slot />
+    </View>
   );
 }

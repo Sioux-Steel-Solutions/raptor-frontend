@@ -1,17 +1,20 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 
 export default function Index() {
+  const router = useRouter();
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Raptor Sweep Control</Text>
       <Text style={styles.subtitle}>Grain Bin Management System</Text>
 
-      <Link href="/dashboard" asChild>
-        <Pressable style={styles.button}>
-          <Text style={styles.buttonText}>Open Dashboard</Text>
-        </Pressable>
-      </Link>
+      <Pressable
+        style={styles.button}
+        onPress={() => router.push('/dashboard')}
+      >
+        <Text style={styles.buttonText}>Open Dashboard</Text>
+      </Pressable>
     </View>
   );
 }
