@@ -5,14 +5,22 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Pressable,
-  ActivityIndicator,
+  Image,
 } from 'react-native';
+import { Slider } from '@miblanchard/react-native-slider';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useMqtt, getConfigFromEnv } from '@raptor/mqtt';
 import { mockSweepData } from '@raptor/shared';
-import { Card, CardHeader, CardContent, CardTitle } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
+import { useTheme } from '../../contexts/ThemeContext';
+import {
+  Play,
+  Square,
+  RotateCcw,
+  Thermometer,
+  Droplet,
+  Zap,
+  Activity
+} from 'lucide-react-native';
 
 interface VFDTelemetry {
   target_rpm: number;
@@ -25,6 +33,7 @@ interface VFDTelemetry {
 export default function SweepDetailPage() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { theme, colors } = useTheme();
 
   // Find sweep data
   const sweep = mockSweepData.find((s) => s.id === id);
@@ -32,45 +41,28 @@ export default function SweepDetailPage() {
   // State
   const [isRunning, setIsRunning] = useState(false);
   const [sweepPosition, setSweepPosition] = useState(0);
-  const [operatingHours, setOperatingHours] = useState(1247.5);
-  const [wheelDirection, setWheelDirection] = useState<'fwd' | 'rev'>('fwd');
-  const [wheelSpeed, setWheelSpeed] = useState(600);
-  const [chainSpeed, setChainSpeed] = useState(420);
-  const [voltage, setVoltage] = useState(0);
-  const [directionWarning, setDirectionWarning] = useState('');
+  const [targetThroughput, setTargetThroughput] = useState(75);
+  const [currentThroughput, setCurrentThroughput] = useState(0);
+  const [chainRPM, setChainRPM] = useState(0);
 
-  // Telemetry
-  const [chainTelemetry, setChainTelemetry] = useState<VFDTelemetry | null>(null);
-  const [innerWheelTelemetry, setInnerWheelTelemetry] = useState<VFDTelemetry | null>(null);
-  const [outerWheelTelemetry, setOuterWheelTelemetry] = useState<VFDTelemetry | null>(null);
+  // KPI State
+  const [temperature, setTemperature] = useState(75);
+  const [humidity, setHumidity] = useState(13);
+  const [motorLoad, setMotorLoad] = useState(30);
+  const [vibration, setVibration] = useState(16);
 
-  // Refs for debouncing
-  const lastCmdRef = useRef<{ running: boolean; time: number } | null>(null);
-  const lastDirCmdRef = useRef<{ direction: string; time: number } | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [angleRaw, setAngleRaw] = useState(0);
+  // Refs for animation
   const rafRef = useRef<number | null>(null);
   const lastTsRef = useRef<number | null>(null);
+  const [angleRaw, setAngleRaw] = useState(0);
   const SWEEP_RATE_DEG_PER_SEC = 2;
 
   // MQTT Connection
-  const { isConnected, publish, subscribe, topics, mode } = useMqtt({
+  const { isConnected, publish, subscribe, topics } = useMqtt({
     config: getConfigFromEnv(),
     onMessage: (_topic, payload) => {
       try {
         const data = JSON.parse(payload.toString());
-
-        // Parse telemetry
-        if (data?.chain) setChainTelemetry(data.chain);
-        if (data?.inner_wheel) setInnerWheelTelemetry(data.inner_wheel);
-        if (data?.outer_wheel) setOuterWheelTelemetry(data.outer_wheel);
-
-        // Voltage
-        if (data?.chain?.voltage) {
-          setVoltage(data.chain.voltage);
-        } else if (typeof data?.voltage === 'number') {
-          setVoltage(data.voltage);
-        }
 
         // Running state
         if (
@@ -80,18 +72,19 @@ export default function SweepDetailPage() {
           setIsRunning(data.wheels_running && data.paddle_running);
         }
 
-        // Direction
-        if (data?.wheel_direction === 'fwd' || data?.wheel_direction === 'rev') {
-          setWheelDirection(data.wheel_direction);
+        // Chain RPM
+        if (data?.chain?.actual_rpm) {
+          setChainRPM(data.chain.actual_rpm);
         }
 
-        // Speeds
-        if (typeof data?.wheel_speed === 'number') setWheelSpeed(data.wheel_speed);
-        if (typeof data?.chain_speed === 'number') setChainSpeed(data.chain_speed);
+        // Motor load (amps)
+        if (data?.chain?.amps) {
+          setMotorLoad(data.chain.amps);
+        }
 
-        // Warning
-        if (typeof data?.direction_warning === 'string') {
-          setDirectionWarning(data.direction_warning);
+        // Current throughput
+        if (typeof data?.current_throughput === 'number') {
+          setCurrentThroughput(data.current_throughput);
         }
       } catch {
         // ignore
@@ -147,65 +140,34 @@ export default function SweepDetailPage() {
     setSweepPosition(normalized);
   }, [angleRaw]);
 
-  // Operating hours update
-  useEffect(() => {
-    if (isRunning) {
-      intervalRef.current = setInterval(() => {
-        setOperatingHours((prev) => prev + 0.001);
-      }, 100);
-    } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isRunning]);
-
   // Command helpers
-  const publishCmd = (running: boolean) => {
-    const now = Date.now();
-    const last = lastCmdRef.current;
-
-    if (last && last.running === running && now - last.time < 2000) {
-      return;
-    }
-
-    lastCmdRef.current = { running, time: now };
+  const handleStart = () => {
     const payload = JSON.stringify({
-      wheels_running: running,
-      chain_running: running,
+      wheels_running: true,
+      chain_running: true,
     });
     publish(topics.cmd, payload, { qos: 1 });
   };
 
-  const publishDirection = (direction: 'fwd' | 'rev') => {
-    const now = Date.now();
-    const last = lastDirCmdRef.current;
-
-    if (last && last.direction === direction && now - last.time < 2000) {
-      return;
-    }
-
-    lastDirCmdRef.current = { direction, time: now };
-    const payload = JSON.stringify({ wheel_direction: direction });
+  const handleStop = () => {
+    const payload = JSON.stringify({
+      wheels_running: false,
+      chain_running: false,
+    });
     publish(topics.cmd, payload, { qos: 1 });
-    setWheelDirection(direction);
   };
 
-  const handleStart = () => publishCmd(true);
-  const handleStop = () => publishCmd(false);
-
-  const getStatusColor = () => (isRunning ? '#22c55e' : '#6b7280');
-  const getStatusText = () => (isRunning ? 'RUNNING' : 'STOPPED');
+  const handleReset = () => {
+    // Reset to 0 degrees
+    setAngleRaw(0);
+    setSweepPosition(0);
+  };
 
   if (!sweep) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.notFoundContainer}>
           <Text style={styles.notFoundTitle}>Sweep Not Found</Text>
-          <Text style={styles.notFoundText}>
-            The requested sweep could not be found.
-          </Text>
           <TouchableOpacity
             onPress={() => router.push('/dashboard')}
             style={styles.backButton}
@@ -217,220 +179,205 @@ export default function SweepDetailPage() {
     );
   }
 
+  const sweepRate = isRunning ? SWEEP_RATE_DEG_PER_SEC : 0;
+  const direction = 'CW';
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* Header with Logo */}
         <View style={styles.header}>
-          <View style={styles.headerRow}>
-            <TouchableOpacity
-              onPress={() => router.push('/dashboard')}
-              style={styles.backBtn}
-            >
-              <Text style={styles.backBtnText}>← Back</Text>
-            </TouchableOpacity>
-            <View style={styles.headerInfo}>
-              <Text style={styles.headerTitle}>{sweep.name}</Text>
-              <Text style={styles.headerSubtitle}>
-                {id} | {sweep.zone}
-              </Text>
-            </View>
+          <Image
+            source={require('../../assets/raptor_icon_yellow.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.headerTitle}>Sweep #{id}</Text>
+        </View>
+
+        {/* KPIs Section */}
+        <View style={styles.kpiContainer}>
+          <View style={styles.kpiCard}>
+            <Thermometer size={20} color="#ef4444" />
+            <Text style={styles.kpiValue}>{temperature}°F</Text>
+            <Text style={styles.kpiLabel}>Temperature</Text>
           </View>
-          <View style={styles.headerStatus}>
-            <Badge
-              variant={isRunning ? 'optimal' : 'stopped'}
-              style={styles.statusBadge}
-            >
-              {getStatusText()}
-            </Badge>
-            <View style={styles.hoursContainer}>
-              <Text style={styles.hoursLabel}>Operating Hours</Text>
-              <Text style={styles.hoursValue}>{operatingHours.toFixed(1)}</Text>
-            </View>
+          <View style={styles.kpiCard}>
+            <Droplet size={20} color="#3b82f6" />
+            <Text style={styles.kpiValue}>{humidity}%</Text>
+            <Text style={styles.kpiLabel}>Humidity</Text>
+          </View>
+          <View style={styles.kpiCard}>
+            <Zap size={20} color="#fad512" />
+            <Text style={styles.kpiValue}>{motorLoad} amps</Text>
+            <Text style={styles.kpiLabel}>Motor Load</Text>
+            <Text style={styles.kpiSubLabel}>Current Load</Text>
+          </View>
+          <View style={styles.kpiCard}>
+            <Activity size={20} color="#a855f7" />
+            <Text style={styles.kpiValue}>{vibration} mm/s</Text>
+            <Text style={styles.kpiLabel}>Vibration</Text>
+            <Text style={styles.kpiSubLabel}>RMS Velocity</Text>
           </View>
         </View>
 
-        {/* Connection Status */}
-        {!isConnected && (
-          <Card style={styles.connectionCard}>
-            <CardContent style={styles.connectionCardContent}>
-              <ActivityIndicator size="small" color="#3b82f6" />
-              <Text style={styles.connectionText}>
-                Connecting to {mode} broker...
-              </Text>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Controls Card */}
-        <Card style={styles.controlsCard}>
-          <CardHeader>
-            <CardTitle>
-              <Text style={styles.cardTitle}>System Controls</Text>
-            </CardTitle>
-          </CardHeader>
-          <CardContent style={styles.controlsContent}>
-            {/* Start/Stop/Direction Buttons */}
-            <View style={styles.controlButtons}>
-              <Pressable
-                onPress={handleStart}
-                disabled={isRunning || !!directionWarning || !isConnected}
-                style={[
-                  styles.controlButton,
-                  styles.startButton,
-                  (isRunning || !!directionWarning || !isConnected) &&
-                    styles.disabledButton,
-                ]}
-              >
-                <Text style={styles.controlButtonText}>▶ START</Text>
-              </Pressable>
-              <Pressable
-                onPress={handleStop}
-                disabled={!isRunning || !isConnected}
-                style={[
-                  styles.controlButton,
-                  styles.stopButton,
-                  (!isRunning || !isConnected) && styles.disabledButton,
-                ]}
-              >
-                <Text style={styles.controlButtonText}>⬛ STOP</Text>
-              </Pressable>
-              <Pressable
-                onPress={() =>
-                  publishDirection(wheelDirection === 'fwd' ? 'rev' : 'fwd')
-                }
-                disabled={!isConnected}
-                style={[
-                  styles.controlButton,
-                  wheelDirection === 'fwd' ? styles.fwdButton : styles.revButton,
-                  !isConnected && styles.disabledButton,
-                ]}
-              >
-                <Text style={styles.controlButtonText}>
-                  {wheelDirection === 'fwd' ? 'FWD' : 'REV'}
-                </Text>
-              </Pressable>
-            </View>
-
-            {/* Direction Warning */}
-            {directionWarning && (
-              <View style={styles.warningBanner}>
-                <Text style={styles.warningText}>{directionWarning}</Text>
-              </View>
-            )}
-
-            {/* Speed Info */}
-            <View style={styles.speedInfo}>
-              <View style={styles.speedItem}>
-                <Text style={styles.speedLabel}>Wheel Speed</Text>
-                <Text style={styles.speedValue}>{wheelSpeed}</Text>
-              </View>
-              <View style={styles.speedItem}>
-                <Text style={styles.speedLabel}>Chain Speed</Text>
-                <Text style={styles.speedValue}>{chainSpeed}</Text>
-              </View>
-            </View>
-          </CardContent>
-        </Card>
-
         {/* Position Display */}
-        <Card style={styles.positionCard}>
-          <CardHeader>
-            <CardTitle>
-              <Text style={styles.cardTitle}>Sweep Position</Text>
-            </CardTitle>
-          </CardHeader>
-          <CardContent style={styles.positionContent}>
-            {/* Position Circle */}
-            <View style={styles.positionCircleContainer}>
-              <View style={styles.positionCircle}>
-                <View
-                  style={[
-                    styles.positionNeedle,
-                    { transform: [{ rotate: `${angleRaw}deg` }] },
-                  ]}
-                />
-                <View style={styles.positionCenter} />
-              </View>
-              {/* Compass markers */}
-              <Text style={[styles.compassMarker, styles.compassN]}>N</Text>
-              <Text style={[styles.compassMarker, styles.compassS]}>S</Text>
-              <Text style={[styles.compassMarker, styles.compassW]}>W</Text>
-              <Text style={[styles.compassMarker, styles.compassE]}>E</Text>
+        <View style={styles.positionSection}>
+          {/* Position Value (Left) */}
+          <View style={styles.positionLeftInfo}>
+            <Text style={styles.positionDegrees}>{sweepPosition.toFixed(0)}°</Text>
+            <Text style={styles.positionLabel}>Current{'\n'}Position</Text>
+            <View style={styles.spacer} />
+            <Text style={styles.sweepRateLabel}>Sweep Rate</Text>
+            <Text style={styles.sweepRateValue}>{sweepRate.toFixed(1)} °/sec</Text>
+            <Text style={styles.directionLabel}>Direction</Text>
+            <Text style={styles.directionValue}>{direction}</Text>
+          </View>
+
+          {/* Compass Circle */}
+          <View style={styles.compassContainer}>
+            {/* North marker */}
+            <Text style={[styles.compassMarker, styles.compassN]}>N</Text>
+
+            {/* Circle */}
+            <View style={styles.compassCircle}>
+              {/* Needle */}
+              <View
+                style={[
+                  styles.compassNeedle,
+                  { transform: [{ rotate: `${angleRaw}deg` }] },
+                ]}
+              />
+              {/* Center dot */}
+              <View style={styles.compassCenter} />
             </View>
 
-            {/* Position Info */}
-            <View style={styles.positionInfo}>
-              <View style={styles.positionValueContainer}>
-                <Text style={styles.positionValue}>{sweepPosition.toFixed(0)}°</Text>
-                <Text style={styles.positionLabel}>POSITION</Text>
-              </View>
-              <View style={styles.positionMetrics}>
-                <Text style={styles.positionMetric}>
-                  Rate: {isRunning ? '2.0' : '0.0'}°/s
-                </Text>
-                <Text style={styles.positionMetric}>
-                  Dir: {wheelDirection === 'fwd' ? 'CW' : 'CCW'}
-                </Text>
-              </View>
+            {/* Compass markers */}
+            <Text style={[styles.compassMarker, styles.compassW]}>W</Text>
+            <Text style={[styles.compassMarker, styles.compassE]}>E</Text>
+            <Text style={[styles.compassMarker, styles.compassS]}>S</Text>
+          </View>
+        </View>
+
+        {/* System Controls */}
+        <View style={styles.controlsSection}>
+          <Text style={styles.controlsTitle}>System Controls</Text>
+
+          {/* Control Buttons */}
+          <View style={styles.controlButtons}>
+            <TouchableOpacity
+              onPress={handleStart}
+              disabled={isRunning || !isConnected}
+              style={[
+                styles.controlButton,
+                styles.startButton,
+                (isRunning || !isConnected) && styles.disabledButton,
+              ]}
+            >
+              <Play size={20} color="#ffffff" fill="#ffffff" />
+              <Text style={styles.controlButtonText}>Start</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleStop}
+              disabled={!isRunning || !isConnected}
+              style={[
+                styles.controlButton,
+                styles.stopButton,
+                (!isRunning || !isConnected) && styles.disabledButton,
+              ]}
+            >
+              <Square size={18} color="#ffffff" fill="#ffffff" />
+              <Text style={styles.controlButtonText}>Stop</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleReset}
+              disabled={!isConnected}
+              style={[
+                styles.controlButton,
+                styles.resetButton,
+                !isConnected && styles.disabledButton,
+              ]}
+            >
+              <RotateCcw size={20} color="#1e293b" />
+              <Text style={styles.resetButtonText}>Reset</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Target Throughput Slider */}
+          <View style={styles.sliderContainer}>
+            <View style={styles.sliderHeader}>
+              <Text style={styles.sliderLabel}>Target Throughput</Text>
+              <Text style={styles.sliderValueLabel}>{Math.round(targetThroughput)} bu/hr</Text>
             </View>
-          </CardContent>
-        </Card>
-
-        {/* Motor Telemetry */}
-        <Card style={styles.telemetryCard}>
-          <CardHeader>
-            <CardTitle>
-              <Text style={styles.cardTitle}>Motor Telemetry</Text>
-            </CardTitle>
-          </CardHeader>
-          <CardContent style={styles.telemetryContent}>
-            <View style={styles.telemetryGrid}>
-              {/* Chain Motor */}
-              <View style={styles.telemetryItem}>
-                <Text style={styles.telemetryLabel}>Chain Motor</Text>
-                <Text style={styles.telemetryValue}>
-                  {chainTelemetry?.amps?.toFixed(1) ?? '0.0'}A
-                </Text>
-                <Text style={styles.telemetrySecondary}>
-                  {chainTelemetry?.actual_rpm ?? 0} rpm
-                </Text>
-              </View>
-
-              {/* Inner Wheel */}
-              <View style={styles.telemetryItem}>
-                <Text style={styles.telemetryLabel}>Inner Wheel</Text>
-                <Text style={styles.telemetryValue}>
-                  {innerWheelTelemetry?.amps?.toFixed(1) ?? '0.0'}A
-                </Text>
-                <Text style={styles.telemetrySecondary}>
-                  {innerWheelTelemetry?.actual_rpm ?? 0} rpm
-                </Text>
-              </View>
-
-              {/* Outer Wheel */}
-              <View style={styles.telemetryItem}>
-                <Text style={styles.telemetryLabel}>Outer Wheel</Text>
-                <Text style={styles.telemetryValue}>
-                  {outerWheelTelemetry?.amps?.toFixed(1) ?? '0.0'}A
-                </Text>
-                <Text style={styles.telemetrySecondary}>
-                  {outerWheelTelemetry?.actual_rpm ?? 0} rpm
-                </Text>
-              </View>
-
-              {/* DC Bus */}
-              <View style={styles.telemetryItem}>
-                <Text style={styles.telemetryLabel}>DC Bus</Text>
-                <Text style={styles.telemetryValue}>{voltage.toFixed(0)}V</Text>
-                <Text style={styles.telemetrySecondary}>480V 3φ</Text>
-              </View>
+            <Slider
+              containerStyle={styles.sliderWrapper}
+              trackStyle={styles.sliderTrack}
+              minimumTrackStyle={styles.sliderMinimumTrack}
+              thumbStyle={styles.sliderThumb}
+              minimumValue={0}
+              maximumValue={150}
+              value={targetThroughput}
+              onValueChange={(value) => setTargetThroughput(Array.isArray(value) ? value[0] : value)}
+              disabled={!isConnected}
+              minimumTrackTintColor="#fad512"
+              maximumTrackTintColor="#4b5663"
+              thumbTintColor="#ffffff"
+            />
+            <View style={styles.sliderLabels}>
+              <Text style={styles.sliderLabelText}>0 bu/hr</Text>
+              <Text style={styles.sliderLabelText}>75 bu/hr</Text>
+              <Text style={styles.sliderLabelText}>150 bu/hr</Text>
             </View>
-          </CardContent>
-        </Card>
+          </View>
+
+          {/* Current Throughput Display */}
+          <View style={styles.sliderContainer}>
+            <View style={styles.sliderHeader}>
+              <Text style={styles.sliderLabel}>Current Throughput</Text>
+              <Text style={styles.sliderValueLabel}>{currentThroughput.toFixed(1)} bu/hr</Text>
+            </View>
+            <Slider
+              containerStyle={styles.sliderWrapper}
+              trackStyle={styles.sliderTrack}
+              minimumTrackStyle={styles.sliderMinimumTrack}
+              thumbStyle={styles.sliderThumbReadonly}
+              minimumValue={0}
+              maximumValue={150}
+              value={currentThroughput}
+              disabled={true}
+              minimumTrackTintColor="#4b5663"
+              maximumTrackTintColor="#4b5663"
+              thumbTintColor="#94a3b8"
+            />
+          </View>
+
+          {/* Chain RPM Display */}
+          <View style={styles.sliderContainer}>
+            <View style={styles.sliderHeader}>
+              <Text style={styles.sliderLabel}>Chain RPM</Text>
+              <Text style={styles.sliderValueLabel}>{chainRPM} RPM</Text>
+            </View>
+            <Slider
+              containerStyle={styles.sliderWrapper}
+              trackStyle={styles.sliderTrack}
+              minimumTrackStyle={styles.sliderMinimumTrack}
+              thumbStyle={styles.sliderThumbReadonly}
+              minimumValue={0}
+              maximumValue={1800}
+              value={chainRPM}
+              disabled={true}
+              minimumTrackTintColor="#22c55e"
+              maximumTrackTintColor="#ef4444"
+              thumbTintColor="#94a3b8"
+            />
+          </View>
+        </View>
       </ScrollView>
     </View>
   );
@@ -439,14 +386,14 @@ export default function SweepDetailPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1d29', // raptor-dark - exactly matching web
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: 16,
-    gap: 16,
+    paddingTop: 16,
+    gap: 24,
   },
   notFoundContainer: {
     flex: 1,
@@ -460,100 +407,188 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     marginBottom: 16,
   },
-  notFoundText: {
-    fontSize: 16,
-    color: '#94a3b8',
-    marginBottom: 24,
-    textAlign: 'center',
-  },
   backButton: {
-    backgroundColor: '#ea580c',
+    backgroundColor: '#fad512',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   backButtonText: {
-    color: '#ffffff',
+    color: '#0b101c',
     fontWeight: 'bold',
     fontSize: 16,
   },
+
+  // Header
   header: {
-    marginBottom: 16,
-  },
-  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  backBtn: {
-    backgroundColor: '#4b5663', // raptor-lightgray - exactly matching web
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  backBtnText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  headerInfo: {
-    flex: 1,
+  logo: {
+    width: 60,
+    height: 60,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 32,
     fontWeight: 'bold',
-    color: '#fad512', // raptor-yellow - exactly matching web
+    color: '#ffffff',
   },
-  headerSubtitle: {
-    fontSize: 12,
+
+  // KPIs
+  kpiContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  kpiCard: {
+    flex: 1,
+    backgroundColor: '#242c38', // raptor-gray
+    borderRadius: 12,
+    padding: 8,
+    alignItems: 'center',
+    gap: 2,
+  },
+  kpiValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginTop: 2,
+  },
+  kpiLabel: {
+    fontSize: 10,
     color: '#94a3b8',
+    textAlign: 'center',
   },
-  headerStatus: {
+  kpiSubLabel: {
+    fontSize: 8,
+    color: '#64748b',
+    textAlign: 'center',
+  },
+
+  // Position Section
+  positionSection: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginVertical: 12,
+    paddingHorizontal: 8,
   },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  positionLeftInfo: {
+    alignItems: 'flex-start',
+    gap: 2,
   },
-  hoursContainer: {
-    alignItems: 'flex-end',
-  },
-  hoursLabel: {
-    fontSize: 10,
-    color: '#94a3b8',
-  },
-  hoursValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#cbd5e1',
-    fontVariant: ['tabular-nums'],
-  },
-  connectionCard: {
-    marginBottom: 16,
-  },
-  connectionCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-  },
-  connectionText: {
-    color: '#71717a',
-    fontSize: 14,
-  },
-  controlsCard: {
-    marginBottom: 16,
-  },
-  controlsContent: {
-    gap: 16,
-  },
-  cardTitle: {
-    fontSize: 18,
+  positionDegrees: {
+    fontSize: 48,
     fontWeight: 'bold',
     color: '#ffffff',
+    lineHeight: 52,
+  },
+  positionLabel: {
+    fontSize: 12,
+    color: '#94a3b8',
+    lineHeight: 16,
+  },
+  spacer: {
+    height: 16,
+  },
+  sweepRateLabel: {
+    fontSize: 12,
+    color: '#94a3b8',
+  },
+  sweepRateValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  directionLabel: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginTop: 6,
+  },
+  directionValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+
+  // Compass
+  compassContainer: {
+    width: 200,
+    height: 200,
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compassCircle: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 6,
+    borderColor: '#fad512', // raptor-yellow
+    backgroundColor: 'transparent',
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compassNeedle: {
+    position: 'absolute',
+    width: 5,
+    height: 72,
+    backgroundColor: '#fad512',
+    top: '50%',
+    left: '50%',
+    marginLeft: -2.5,
+    marginTop: -72,
+    transformOrigin: 'center bottom',
+    borderRadius: 2.5,
+  },
+  compassCenter: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#fad512',
+    zIndex: 10,
+  },
+  compassMarker: {
+    position: 'absolute',
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  compassN: {
+    top: -8,
+    left: '50%',
+    marginLeft: -8,
+  },
+  compassS: {
+    bottom: -8,
+    left: '50%',
+    marginLeft: -7,
+  },
+  compassW: {
+    left: -8,
+    top: '50%',
+    marginTop: -8,
+  },
+  compassE: {
+    right: -8,
+    top: '50%',
+    marginTop: -8,
+  },
+
+  // Controls Section
+  controlsSection: {
+    backgroundColor: '#242c38', // raptor-gray
+    borderRadius: 12,
+    padding: 16,
+    gap: 16,
+  },
+  controlsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 4,
   },
   controlButtons: {
     flexDirection: 'row',
@@ -561,194 +596,92 @@ const styles = StyleSheet.create({
   },
   controlButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 8,
   },
   startButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: '#22c55e', // green
   },
   stopButton: {
-    backgroundColor: '#dc2626',
+    backgroundColor: '#ef4444', // red
   },
-  fwdButton: {
-    backgroundColor: '#16a34a',
-  },
-  revButton: {
-    backgroundColor: '#2563eb',
+  resetButton: {
+    backgroundColor: '#ffffff',
   },
   disabledButton: {
     opacity: 0.5,
   },
   controlButtonText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
   },
-  warningBanner: {
-    backgroundColor: '#7f1d1d',
-    borderWidth: 1,
-    borderColor: '#ef4444',
-    borderRadius: 8,
-    padding: 12,
-  },
-  warningText: {
-    color: '#fecaca',
-    fontSize: 14,
-  },
-  speedInfo: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  speedItem: {
-    flex: 1,
-    backgroundColor: '#4b5663', // raptor-lightgray - exactly matching web
-    borderRadius: 8,
-    padding: 12,
-  },
-  speedLabel: {
-    fontSize: 12,
-    color: '#94a3b8',
-    marginBottom: 4,
-  },
-  speedValue: {
-    fontSize: 20,
+  resetButtonText: {
+    color: '#1e293b',
+    fontSize: 15,
     fontWeight: 'bold',
-    color: '#ffffff',
-    fontVariant: ['tabular-nums'],
   },
-  positionCard: {
-    marginBottom: 16,
+
+  // Sliders - Modern styling
+  sliderContainer: {
+    gap: 8,
   },
-  positionContent: {
-    alignItems: 'center',
-    gap: 16,
-  },
-  positionCircleContainer: {
-    width: 200,
-    height: 200,
-    position: 'relative',
-  },
-  positionCircle: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 4,
-    borderColor: '#fad512', // raptor-yellow - exactly matching web
-    backgroundColor: '#2d3548', // raptor-gray - exactly matching web
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  positionNeedle: {
-    position: 'absolute',
-    width: 3,
-    height: 85,
-    backgroundColor: '#fad512', // raptor-yellow - exactly matching web
-    top: '50%',
-    left: '50%',
-    marginLeft: -1.5,
-    marginTop: -85,
-    transformOrigin: 'center bottom',
-    borderRadius: 2,
-  },
-  positionCenter: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#fad512', // raptor-yellow - exactly matching web
-    zIndex: 10,
-  },
-  compassMarker: {
-    position: 'absolute',
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  compassN: {
-    top: -8,
-    left: '50%',
-    marginLeft: -6,
-  },
-  compassS: {
-    bottom: -8,
-    left: '50%',
-    marginLeft: -6,
-  },
-  compassW: {
-    left: -10,
-    top: '50%',
-    marginTop: -7,
-  },
-  compassE: {
-    right: -10,
-    top: '50%',
-    marginTop: -7,
-  },
-  positionInfo: {
-    backgroundColor: '#4b5663', // raptor-lightgray - exactly matching web
-    borderRadius: 8,
-    padding: 16,
-    width: '100%',
+  sliderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  positionValueContainer: {
-    alignItems: 'center',
-  },
-  positionValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
+  sliderLabel: {
+    fontSize: 14,
     color: '#ffffff',
-    fontVariant: ['tabular-nums'],
+    fontWeight: '600',
   },
-  positionLabel: {
-    fontSize: 10,
-    color: '#94a3b8',
-    marginTop: 4,
+  sliderValueLabel: {
+    fontSize: 16,
+    color: '#ffffff',
+    fontWeight: 'bold',
   },
-  positionMetrics: {
-    alignItems: 'flex-end',
-    gap: 4,
+  sliderWrapper: {
+    height: 40,
   },
-  positionMetric: {
-    fontSize: 12,
-    color: '#cbd5e1',
+  sliderTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4b5663',
   },
-  telemetryCard: {
-    marginBottom: 16,
+  sliderMinimumTrack: {
+    height: 8,
+    borderRadius: 4,
   },
-  telemetryContent: {},
-  telemetryGrid: {
+  sliderThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  sliderThumbReadonly: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#94a3b8',
+  },
+  sliderLabels: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  telemetryItem: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#4b5663', // raptor-lightgray - exactly matching web
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-  },
-  telemetryLabel: {
-    fontSize: 10,
-    color: '#94a3b8',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  telemetryValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    fontVariant: ['tabular-nums'],
-  },
-  telemetrySecondary: {
-    fontSize: 12,
-    color: '#94a3b8',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
     marginTop: 4,
+  },
+  sliderLabelText: {
+    fontSize: 11,
+    color: '#94a3b8',
   },
 });

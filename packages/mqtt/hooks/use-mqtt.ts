@@ -71,8 +71,12 @@ export function useMqtt(options: UseMqttOptions) {
     const isReactNative = typeof navigator !== 'undefined' &&
                           navigator.product === 'ReactNative';
 
+    // Generate unique client ID per device/session
+    const clientId = `raptor_${mode}_${Math.random().toString(36).substring(2, 15)}`;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mqttOptions: any = {
+      clientId,                   // Unique client ID to prevent conflicts
       reconnectPeriod: 1000,      // Fast reconnect (1s)
       connectTimeout: 10000,      // 10s connection timeout
       keepalive: isReactNative ? 60 : 30, // Longer on mobile for battery
