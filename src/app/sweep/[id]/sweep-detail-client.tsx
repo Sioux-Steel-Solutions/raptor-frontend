@@ -190,8 +190,10 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
         if (topic === 'raptor/sweep/1/angle') {
           if (data.detecting && typeof data.angle === 'number') {
             setRealSweepAngle(data.angle);
-            setSweepPosition(data.angle);
-            setAngleRaw(data.angle); // Sync simulated angle
+            setAngleRaw(data.angle); // Update angle - sweepPosition will auto-update via effect
+          } else {
+            // Not detecting - clear real angle so simulation can take over
+            setRealSweepAngle(null);
           }
           return;
         }
@@ -367,8 +369,16 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
     setChainSpeed(speed);
   };
 
-  // smooth rotation driven by requestAnimationFrame
+  // smooth rotation driven by requestAnimationFrame (only if not receiving real MQTT data)
   useEffect(() => {
+    // If we have real MQTT angle data, don't run simulation
+    if (realSweepAngle !== null) {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+      lastTsRef.current = null;
+      return;
+    }
+
     if (!isRunning) {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
@@ -391,7 +401,7 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
       rafRef.current = null;
       lastTsRef.current = null;
     };
-  }, [isRunning]);
+  }, [isRunning, realSweepAngle]);
 
   // keep displayed sweepPosition (0–359) in sync with continuous angle
   useEffect(() => {
