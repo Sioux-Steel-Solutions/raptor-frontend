@@ -177,11 +177,24 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
   // direction warning from MQTT (empty = OK, or warning message)
   const [directionWarning, setDirectionWarning] = useState<string>("");
 
+  // Real-time sweep angle from MQTT
+  const [realSweepAngle, setRealSweepAngle] = useState<number | null>(null);
+
   // Network-aware MQTT connection (auto-switches local/cloud)
   const { subscribe, publish, topics, isConnected, mode, isOnline } = useNetworkAwareMqtt({
-    onMessage: (_topic, payload) => {
+    onMessage: (topic, payload) => {
       try {
         const data = JSON.parse(payload.toString());
+
+        // Handle sweep angle updates (dedicated topic for fast updates)
+        if (topic === 'raptor/sweep/1/angle') {
+          if (data.detecting && typeof data.angle === 'number') {
+            setRealSweepAngle(data.angle);
+            setSweepPosition(data.angle);
+            setAngleRaw(data.angle); // Sync simulated angle
+          }
+          return;
+        }
 
         // Parse per-VFD telemetry (NEW)
         if (data?.chain) {
@@ -240,10 +253,11 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
     },
   });
 
-  // Subscribe to state topic when connected
+  // Subscribe to state topic and sweep angle topic when connected
   useEffect(() => {
     if (isConnected) {
       subscribe(topics.state);
+      subscribe('raptor/sweep/1/angle'); // Subscribe to sweep angle topic
     }
   }, [isConnected, subscribe, topics.state]);
 
