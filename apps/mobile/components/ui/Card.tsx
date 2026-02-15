@@ -39,7 +39,7 @@ export function CardTitle({ children, style, ...props }: CardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#2d3548', // raptor-gray - exactly matching web
+    backgroundColor: '#242c38', // raptor-card - darker card color
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#334155', // slate-700

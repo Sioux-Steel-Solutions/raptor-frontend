@@ -378,6 +378,14 @@ export default function SweepDetailPage() {
             />
           </View>
         </View>
+
+        {/* System Overview Button */}
+        <TouchableOpacity
+          onPress={() => router.push(`/sweep/${id}/overview`)}
+          style={styles.systemOverviewButton}
+        >
+          <Text style={styles.systemOverviewButtonText}>System Overview</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -683,5 +691,20 @@ const styles = StyleSheet.create({
   sliderLabelText: {
     fontSize: 11,
     color: '#94a3b8',
+  },
+
+  // System Overview Button
+  systemOverviewButton: {
+    backgroundColor: '#fad512',
+    paddingVertical: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  systemOverviewButtonText: {
+    color: '#0b101c',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });

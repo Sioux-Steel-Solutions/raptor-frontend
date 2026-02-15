@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Pressable,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { mockSweepData, SweepData } from '@raptor/shared';
@@ -244,9 +245,13 @@ export default function DashboardPage() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Raptor Sweep Dashboard</Text>
-            <Text style={styles.headerSubtitle}>Sioux Steel Co.</Text>
+          <View style={styles.headerTop}>
+            <Image
+              source={require('../assets/raptor_icon_yellow.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.headerTitle}>Dashboard</Text>
           </View>
           <View style={styles.viewModeToggle}>
             <TouchableOpacity
@@ -306,20 +311,22 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
-  headerText: {
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     marginBottom: 16,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fad512', // raptor-yellow - exactly matching web
-    marginBottom: 4,
+  logo: {
+    width: 60,
+    height: 60,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#94a3b8', // slate-400
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#ffffff',
   },
   viewModeToggle: {
     flexDirection: 'row',

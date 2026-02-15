@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Card, CardContent } from '../../components/ui/Card';
 import {
@@ -14,7 +14,6 @@ import {
   AlertTriangle,
   ChevronRight,
 } from 'lucide-react-native';
-import { RaptorIcon } from '../../components/RaptorIcon';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface MenuItem {
@@ -104,10 +103,12 @@ export default function SettingsPage() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Header with Logo */}
         <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <RaptorIcon size={48} />
-            <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
-          </View>
+          <Image
+            source={require('../../assets/raptor_icon_yellow.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.headerTitle}>Settings</Text>
         </View>
 
         {/* Main Settings Card */}
@@ -151,28 +152,17 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   header: {
-    marginBottom: 24,
-  },
-  logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    marginBottom: 24,
   },
   logo: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#fad512',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1a1d29',
+    width: 60,
+    height: 60,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#ffffff',
   },

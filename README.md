@@ -61,3 +61,35 @@ npm run clean
 - **Topics**: `raptor/{site}/{device}/state|cmd|status|faults`
 
 See `apps/web/docs/MQTT-ARCHITECTURE.md` for details.
+
+## Camera Integration
+
+### PTZ Camera - Position Tracking
+
+The Raptor Sweep system integrates a **PTZ camera** (Insta360 Link 2) for visual position tracking at live demonstrations.
+
+**GEAPS Show Deployment:**
+- Camera mounted directly above the central pivot point (overhead view)
+- Tracks sweep arm rotation like a clock face (0°=North, 90°=East, 180°=South, 270°=West)
+- Live WebRTC stream embedded in the Controls view
+- Public access via https://ptz-camera.tailc61a08.ts.net/
+
+**Technical Implementation:**
+```tsx
+// apps/web/src/app/sweep/[id]/sweep-detail-client.tsx (line 659)
+<iframe
+  src="https://ptz-camera.tailc61a08.ts.net/stream.html?src=ptz-camera&mode=webrtc"
+  title="PTZ Camera Feed"
+  className="w-full h-full border-0"
+  allow="autoplay"
+/>
+```
+
+**Toggle Feature:**
+Users can toggle between:
+1. **Camera Feed** - Live overhead view from GEAPS Show
+2. **Position Dial** - Animated compass showing sweep angle (0-359°)
+
+This provides visual confirmation of the sweep's position, complementing the telemetry data from VFD controllers.
+
+**Camera Repository:** `~/ptz-camera/README.md`

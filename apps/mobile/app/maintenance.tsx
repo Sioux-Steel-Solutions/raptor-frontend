@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Switch as RNSwitch } from 'react-native';
 import { Card, CardHeader, CardContent, CardTitle } from '../components/ui/Card';
 import { mockSweepData } from '@raptor/shared';
 import {
@@ -11,6 +11,12 @@ import {
   FileText,
   Activity,
   Headphones,
+  Search,
+  ChevronDown,
+  Shield,
+  RotateCcw,
+  Wrench,
+  BarChart3,
 } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -19,6 +25,10 @@ export default function MaintenancePage() {
   const [selectedSweep, setSelectedSweep] = useState('SA-001');
   const [tractorJogState, setTractorJogState] = useState<'stopped' | 'forward' | 'reverse'>('stopped');
   const [chainJogState, setChainJogState] = useState<'stopped' | 'forward' | 'reverse'>('stopped');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [switch1, setSwitch1] = useState(true);
+  const [switch2, setSwitch2] = useState(false);
+  const [switch3, setSwitch3] = useState(false);
 
   const handleTractorJog = (direction: 'forward' | 'reverse' | 'stop') => {
     if (direction === 'stop') {
@@ -41,22 +51,61 @@ export default function MaintenancePage() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
+          <Image
+            source={require('../assets/raptor_icon_yellow.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.headerTitle}>Maintenance</Text>
-          <View style={styles.modeBadge}>
-            <Text style={styles.modeBadgeText}>MAINTENANCE MODE</Text>
+        </View>
+
+        {/* Safety Warning - At Top */}
+        <View style={styles.warningBanner}>
+          <AlertTriangle size={24} color="#f87171" style={styles.warningIcon} />
+          <View style={styles.warningContent}>
+            <Text style={styles.warningTitle}>Safety Warning</Text>
+            <Text style={styles.warningText}>
+              Maintenance mode disables normal safety interlocks. Ensure all personnel are clear
+              of equipment before operating jog controls.
+            </Text>
           </View>
         </View>
 
-        {/* Select Sweep */}
+        {/* Maintenance Mode Badge */}
+        <TouchableOpacity style={styles.modeBadge}>
+          <Text style={styles.modeBadgeText}>MAINTENANCE MODE</Text>
+        </TouchableOpacity>
+
+        {/* Select Bin */}
         <Card style={[styles.card, { backgroundColor: colors.card }]}>
           <CardHeader>
             <CardTitle>
-              <Text style={styles.cardTitle}>Select Sweep</Text>
+              <Text style={styles.cardTitle}>Select Bin</Text>
             </CardTitle>
           </CardHeader>
           <CardContent style={styles.sweepSelector}>
+            {/* Search Bar */}
+            <View style={styles.searchRow}>
+              <View style={styles.searchInput}>
+                <Search size={18} color="#94a3b8" />
+                <TextInput
+                  style={styles.searchTextInput}
+                  placeholder="Search"
+                  placeholderTextColor="#94a3b8"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+              </View>
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={() => setSearchQuery('')}
+              >
+                <Text style={styles.clearButtonText}>Clear</Text>
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.sweepButtons}>
-              {mockSweepData.slice(0, 6).map((sweep) => (
+              {mockSweepData.slice(0, 4).map((sweep) => (
                 <TouchableOpacity
                   key={sweep.id}
                   onPress={() => setSelectedSweep(sweep.id)}
@@ -84,6 +133,11 @@ export default function MaintenancePage() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* Down chevron */}
+            <View style={styles.sweepGridFooter}>
+              <ChevronDown size={20} color="#94a3b8" />
+            </View>
           </CardContent>
         </Card>
 
@@ -91,7 +145,10 @@ export default function MaintenancePage() {
         <Card style={[styles.card, { backgroundColor: colors.card }]}>
           <CardHeader>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Tractor Jog</Text>
+              <View style={styles.cardHeaderWithIcon}>
+                <RotateCcw size={20} color="#ffffff" />
+                <Text style={styles.cardTitle}>Tractor Jog</Text>
+              </View>
               <View
                 style={[
                   styles.statusBadge,
@@ -144,7 +201,10 @@ export default function MaintenancePage() {
         <Card style={[styles.card, { backgroundColor: colors.card }]}>
           <CardHeader>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Chain Jog</Text>
+              <View style={styles.cardHeaderWithIcon}>
+                <RotateCcw size={20} color="#ffffff" />
+                <Text style={styles.cardTitle}>Chain Jog</Text>
+              </View>
               <View
                 style={[
                   styles.statusBadge,
@@ -193,48 +253,86 @@ export default function MaintenancePage() {
           </CardContent>
         </Card>
 
+        {/* Isolate Tractor */}
+        <Card style={[styles.card, { backgroundColor: colors.card }]}>
+          <CardHeader>
+            <View style={styles.cardHeaderWithIcon}>
+              <Shield size={20} color="#ffffff" />
+              <Text style={styles.cardTitle}>Isolate Tractor</Text>
+            </View>
+          </CardHeader>
+          <CardContent>
+            <View style={styles.isolationContent}>
+              <View style={styles.switchesColumn}>
+                <View style={styles.switchRow}>
+                  <Text style={styles.switchLabel}>Switch 1</Text>
+                  <RNSwitch
+                    value={switch1}
+                    onValueChange={setSwitch1}
+                    trackColor={{ false: '#4b5663', true: '#22c55e' }}
+                    thumbColor="#ffffff"
+                  />
+                </View>
+                <View style={styles.switchRow}>
+                  <Text style={styles.switchLabel}>Switch 2</Text>
+                  <RNSwitch
+                    value={switch2}
+                    onValueChange={setSwitch2}
+                    trackColor={{ false: '#4b5663', true: '#22c55e' }}
+                    thumbColor="#ffffff"
+                  />
+                </View>
+                <View style={styles.switchRow}>
+                  <Text style={styles.switchLabel}>Switch 3</Text>
+                  <RNSwitch
+                    value={switch3}
+                    onValueChange={setSwitch3}
+                    trackColor={{ false: '#4b5663', true: '#22c55e' }}
+                    thumbColor="#ffffff"
+                  />
+                </View>
+              </View>
+              <View style={styles.isolationStatus}>
+                <Text style={styles.isolationStatusLabel}>Isolation Status</Text>
+                <View style={styles.isolationStatusBadge}>
+                  <Text style={styles.isolationStatusText}>CONNECTED</Text>
+                </View>
+              </View>
+            </View>
+          </CardContent>
+        </Card>
+
         {/* Quick Actions */}
         <Card style={[styles.card, { backgroundColor: colors.card }]}>
           <CardHeader>
-            <CardTitle>
+            <View style={styles.cardHeaderWithIcon}>
+              <Wrench size={20} color="#ffffff" />
               <Text style={styles.cardTitle}>Quick Actions</Text>
-            </CardTitle>
+            </View>
           </CardHeader>
           <CardContent style={styles.quickActions}>
-            <TouchableOpacity style={[styles.actionButton, styles.actionButtonYellow]}>
-              <AlertTriangle size={20} color="#1a1d29" />
-              <Text style={styles.actionButtonTextDark}>Clear Fault</Text>
+            <TouchableOpacity style={[styles.actionButton, styles.actionButtonRed]}>
+              <AlertTriangle size={20} color="#ffffff" />
+              <Text style={styles.actionButtonText}>Clear Fault</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.actionButton, styles.actionButtonBlue]}>
-              <Clock size={20} color="#ffffff" />
+              <Wrench size={20} color="#ffffff" />
               <Text style={styles.actionButtonText}>Maintenance History</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, styles.actionButtonRed]}>
+            <TouchableOpacity style={[styles.actionButton, styles.actionButtonGray]}>
               <FileText size={20} color="#ffffff" />
               <Text style={styles.actionButtonText}>Errors & Logs</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, styles.actionButtonPurple]}>
-              <Activity size={20} color="#ffffff" />
+            <TouchableOpacity style={[styles.actionButton, styles.actionButtonGreen]}>
+              <BarChart3 size={20} color="#ffffff" />
               <Text style={styles.actionButtonText}>Advanced Diagnostics</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, styles.actionButtonGray]}>
+            <TouchableOpacity style={[styles.actionButton, styles.actionButtonPurple]}>
               <Headphones size={20} color="#ffffff" />
               <Text style={styles.actionButtonText}>Remote Support</Text>
             </TouchableOpacity>
           </CardContent>
         </Card>
-
-        {/* Safety Warning */}
-        <View style={styles.warningBanner}>
-          <AlertTriangle size={24} color="#f87171" style={styles.warningIcon} />
-          <View style={styles.warningContent}>
-            <Text style={styles.warningTitle}>Safety Warning</Text>
-            <Text style={styles.warningText}>
-              Maintenance mode disables normal safety interlocks. Ensure all personnel are clear
-              of equipment before operating jog controls.
-            </Text>
-          </View>
-        </View>
       </ScrollView>
     </View>
   );
@@ -253,27 +351,32 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     marginBottom: 8,
+  },
+  logo: {
+    width: 60,
+    height: 60,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
-    color: '#fad512', // raptor-yellow - exactly matching web
-    marginBottom: 8,
+    color: '#ffffff',
   },
   modeBadge: {
-    backgroundColor: '#2d3548', // raptor-gray - exactly matching web
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    alignSelf: 'flex-start',
+    backgroundColor: '#fad512',
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    alignSelf: 'center',
   },
   modeBadgeText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '600',
+    color: '#1a1d29',
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   card: {
     marginBottom: 0,
@@ -287,6 +390,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  cardHeaderWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   statusBadge: {
     backgroundColor: '#4b5663', // raptor-lightgray - exactly matching web
@@ -306,26 +414,63 @@ const styles = StyleSheet.create({
     color: '#22c55e',
   },
   sweepSelector: {
-    padding: 0,
+    padding: 16,
+    gap: 12,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  searchInput: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4b5663',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  searchTextInput: {
+    flex: 1,
+    color: '#ffffff',
+    fontSize: 14,
+  },
+  clearButton: {
+    backgroundColor: '#4b5663',
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    justifyContent: 'center',
+  },
+  clearButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '500',
   },
   sweepButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-    padding: 16,
+  },
+  sweepGridFooter: {
+    alignItems: 'center',
+    paddingTop: 4,
   },
   sweepButton: {
-    backgroundColor: '#4b5663', // raptor-lightgray - exactly matching web
-    borderWidth: 1,
-    borderColor: '#334155',
+    backgroundColor: '#4b5663',
+    borderWidth: 2,
+    borderColor: '#4b5663',
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    minWidth: 100,
+    flex: 1,
+    minWidth: '22%',
+    alignItems: 'center',
   },
   sweepButtonActive: {
-    backgroundColor: '#fad512', // raptor-yellow - exactly matching web
-    borderColor: '#fad512',
+    backgroundColor: '#4b5663',
+    borderColor: '#22d3ee',
   },
   sweepButtonText: {
     color: '#ffffff',
@@ -333,7 +478,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   sweepButtonTextActive: {
-    color: '#1a1d29',
+    color: '#ffffff',
   },
   sweepButtonZone: {
     color: '#94a3b8',
@@ -341,7 +486,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   sweepButtonZoneActive: {
-    color: 'rgba(11, 16, 28, 0.7)',
+    color: '#94a3b8',
   },
   jogButtons: {
     flexDirection: 'row',
@@ -359,7 +504,7 @@ const styles = StyleSheet.create({
     minWidth: 100,
   },
   jogButtonBlue: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#64748b',
   },
   jogButtonRed: {
     backgroundColor: '#dc2626',
@@ -380,20 +525,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
   },
-  actionButtonYellow: {
-    backgroundColor: '#fad512', // raptor-yellow - exactly matching web
-  },
-  actionButtonBlue: {
-    backgroundColor: '#2563eb',
-  },
   actionButtonRed: {
     backgroundColor: '#ef4444',
   },
-  actionButtonPurple: {
-    backgroundColor: '#9333ea',
+  actionButtonBlue: {
+    backgroundColor: '#3b82f6',
   },
   actionButtonGray: {
-    backgroundColor: '#4b5663', // raptor-lightgray - exactly matching web
+    backgroundColor: '#64748b',
+  },
+  actionButtonGreen: {
+    backgroundColor: '#22c55e',
+  },
+  actionButtonPurple: {
+    backgroundColor: '#a855f7',
   },
   actionButtonText: {
     color: '#ffffff',
@@ -401,11 +546,45 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
   },
-  actionButtonTextDark: {
-    color: '#1a1d29',
-    fontSize: 14,
-    fontWeight: '600',
+  isolationContent: {
+    flexDirection: 'row',
+    gap: 24,
+  },
+  switchesColumn: {
     flex: 1,
+    gap: 8,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  switchLabel: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  isolationStatus: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  isolationStatusLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  isolationStatusBadge: {
+    backgroundColor: '#4b5663',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  isolationStatusText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   warningBanner: {
     backgroundColor: 'rgba(127, 29, 29, 0.3)',

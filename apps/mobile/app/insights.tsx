@@ -8,6 +8,7 @@ import {
   TextInput,
   Modal,
   Pressable,
+  Image,
 } from 'react-native';
 import { Card, CardHeader, CardContent, CardTitle } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -44,7 +45,14 @@ export default function InsightsPage() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>AI Insights</Text>
+          <View style={styles.headerTop}>
+            <Image
+              source={require('../assets/raptor_icon_yellow.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.headerTitle}>AI Insights</Text>
+          </View>
           <Text style={styles.headerSubtitle}>
             Real-time intelligence and optimization recommendations
           </Text>
@@ -412,11 +420,20 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 16,
   },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 4,
+  },
+  logo: {
+    width: 60,
+    height: 60,
+  },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#ffffff',
-    marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,

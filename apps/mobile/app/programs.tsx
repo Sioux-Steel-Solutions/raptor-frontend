@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch as RNSwitch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch as RNSwitch, TextInput, Image } from 'react-native';
 import { Card, CardHeader, CardContent, CardTitle } from '../components/ui/Card';
 import { Search, Plus, Play, Pause, Edit2, Trash2, Clock } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
@@ -103,17 +103,31 @@ export default function ProgramsPage() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
+          <Image
+            source={require('../assets/raptor_icon_yellow.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.headerTitle}>Programs</Text>
-          <Text style={styles.headerSubtitle}>Automation programs and control logic</Text>
         </View>
 
-        {/* Search and Create */}
-        <View style={styles.controls}>
-          <TouchableOpacity style={styles.createButton}>
-            <Plus size={20} color="#1a1d29" />
-            <Text style={styles.createButtonText}>New Program</Text>
-          </TouchableOpacity>
+        {/* Search Bar */}
+        <View style={styles.searchBar}>
+          <Search size={18} color="#94a3b8" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search programs..."
+            placeholderTextColor="#94a3b8"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
         </View>
+
+        {/* Create Button */}
+        <TouchableOpacity style={styles.createButton}>
+          <Plus size={20} color="#1a1d29" />
+          <Text style={styles.createButtonText}>New Program</Text>
+        </TouchableOpacity>
 
         {/* Programs List */}
         <View style={styles.programsList}>
@@ -254,32 +268,42 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    gap: 16,
-  },
-  header: {
-    marginBottom: 8,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fad512', // raptor-yellow - exactly matching web
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#94a3b8',
-  },
-  controls: {
-    flexDirection: 'row',
     gap: 12,
   },
-  createButton: {
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  logo: {
+    width: 60,
+    height: 60,
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#242c38',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  searchInput: {
     flex: 1,
+    color: '#ffffff',
+    fontSize: 14,
+  },
+  createButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#fad512', // raptor-yellow - exactly matching web
+    backgroundColor: '#fad512',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
