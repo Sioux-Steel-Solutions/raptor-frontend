@@ -146,6 +146,10 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
   const [sweepPosition, setSweepPosition] = useState(0);
   const [operatingHours, setOperatingHours] = useState(1247.5);
 
+  // Track continuous angle for smooth rotation across 0/360 boundary
+  const [displayAngle, setDisplayAngle] = useState(0);
+  const lastAngleRef = useRef(0);
+
   // Toggle between sweep position dial and camera feed
   const [showCameraFeed, setShowCameraFeed] = useState(true);
 
@@ -186,8 +190,9 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
         // Handle sweep angle updates (dedicated topic for fast updates)
         if (topic === 'raptor/sweep/1/angle') {
           if (data.detecting && typeof data.angle === 'number') {
-            // Directly set sweep position from MQTT - no simulation
-            setSweepPosition(data.angle);
+            // Normalize incoming angle to 0-360
+            const newAngle = ((data.angle % 360) + 360) % 360;
+            setSweepPosition(newAngle);
           }
           // If not detecting, don't update (freeze at last known position)
           return;
@@ -263,9 +268,28 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
   useEffect(() => {
     if (sweep) {
       setSweepPosition(sweep.position);
+      setDisplayAngle(sweep.position);
+      lastAngleRef.current = sweep.position;
       setIsRunning(sweep.isRunning);
     }
   }, [sweep]);
+
+  // Update display angle using shortest path to avoid 360° spins
+  useEffect(() => {
+    const lastAngle = lastAngleRef.current;
+    const newAngle = sweepPosition;
+
+    // Calculate difference taking shortest path
+    let diff = newAngle - lastAngle;
+
+    // Normalize difference to -180 to +180 range
+    while (diff > 180) diff -= 360;
+    while (diff < -180) diff += 360;
+
+    // Update display angle by adding the shortest difference
+    setDisplayAngle(prev => prev + diff);
+    lastAngleRef.current = newAngle;
+  }, [sweepPosition]);
 
 
   // helper to publish start/stop commands with debouncing
@@ -678,7 +702,7 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                             height: "85px",
                             top: "50%",
                             left: "50%",
-                            transform: `translate(-50%, -100%) rotate(${sweepPosition}deg)`,
+                            transform: `translate(-50%, -100%) rotate(${displayAngle}deg)`,
                             transformOrigin: "50% 100%",
                           }}
                         />
