@@ -177,9 +177,6 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
   // direction warning from MQTT (empty = OK, or warning message)
   const [directionWarning, setDirectionWarning] = useState<string>("");
 
-  // Real-time sweep angle from MQTT
-  const [realSweepAngle, setRealSweepAngle] = useState<number | null>(null);
-
   // Network-aware MQTT connection (auto-switches local/cloud)
   const { subscribe, publish, topics, isConnected, mode, isOnline } = useNetworkAwareMqtt({
     onMessage: (topic, payload) => {
@@ -189,12 +186,10 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
         // Handle sweep angle updates (dedicated topic for fast updates)
         if (topic === 'raptor/sweep/1/angle') {
           if (data.detecting && typeof data.angle === 'number') {
-            setRealSweepAngle(data.angle);
-            setAngleRaw(data.angle); // Update angle - sweepPosition will auto-update via effect
-          } else {
-            // Not detecting - clear real angle so simulation can take over
-            setRealSweepAngle(null);
+            // Directly set sweep position from MQTT - no simulation
+            setSweepPosition(data.angle);
           }
+          // If not detecting, don't update (freeze at last known position)
           return;
         }
 
@@ -263,18 +258,11 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
     }
   }, [isConnected, subscribe, topics.state]);
 
-  // continuous angle state + RAF bits (for smooth, no-snap rotation)
-  const [angleRaw, setAngleRaw] = useState(0);
-  const rafRef = useRef<number | null>(null);
-  const lastTsRef = useRef<number | null>(null);
-  const SWEEP_RATE_DEG_PER_SEC = 2; // matches UI label
-
   const sweep = mockSweepData.find((s) => s.id === id);
 
   useEffect(() => {
     if (sweep) {
       setSweepPosition(sweep.position);
-      setAngleRaw(sweep.position); // seed the continuous angle from initial position
       setIsRunning(sweep.isRunning);
     }
   }, [sweep]);
@@ -368,46 +356,6 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
     // Optimistic UI update
     setChainSpeed(speed);
   };
-
-  // smooth rotation driven by requestAnimationFrame (only if not receiving real MQTT data)
-  useEffect(() => {
-    // If we have real MQTT angle data, don't run simulation
-    if (realSweepAngle !== null) {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-      lastTsRef.current = null;
-      return;
-    }
-
-    if (!isRunning) {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-      lastTsRef.current = null;
-      return;
-    }
-
-    const tick = (ts: number) => {
-      if (lastTsRef.current == null) lastTsRef.current = ts;
-      const dtSec = (ts - lastTsRef.current) / 1000;
-      lastTsRef.current = ts;
-
-      setAngleRaw((prev) => prev + SWEEP_RATE_DEG_PER_SEC * dtSec);
-      rafRef.current = requestAnimationFrame(tick);
-    };
-
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-      lastTsRef.current = null;
-    };
-  }, [isRunning, realSweepAngle]);
-
-  // keep displayed sweepPosition (0–359) in sync with continuous angle
-  useEffect(() => {
-    const normalized = ((angleRaw % 360) + 360) % 360;
-    setSweepPosition(normalized);
-  }, [angleRaw]);
 
   // operating hours update loop
   useEffect(() => {
@@ -730,7 +678,7 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                             height: "85px",
                             top: "50%",
                             left: "50%",
-                            transform: `translate(-50%, -100%) rotate(${angleRaw}deg)`,
+                            transform: `translate(-50%, -100%) rotate(${sweepPosition}deg)`,
                             transformOrigin: "50% 100%",
                           }}
                         />
