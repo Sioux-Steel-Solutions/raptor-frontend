@@ -1,0 +1,1 @@
+self.__REACT_LOADABLE_MANIFEST='{"app/sweep/[id]/sweep-detail-client.tsx -> @/components/layout-wrapper":{"id":78744,"files":["static/chunks/744-105caee0e0557a68.js","static/chunks/280.3623cf5f26deb1a5.js"]}}';

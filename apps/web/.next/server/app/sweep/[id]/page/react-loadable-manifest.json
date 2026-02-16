@@ -1,0 +1,9 @@
+{
+  "[project]/apps/web/src/components/layout-wrapper.tsx [app-client] (ecmascript, next/dynamic entry)": {
+    "id": "[project]/apps/web/src/components/layout-wrapper.tsx [app-client] (ecmascript, next/dynamic entry)",
+    "files": [
+      "static/chunks/_d3d2f732._.js",
+      "static/chunks/apps_web_src_components_layout-wrapper_tsx_d3d20210._.js"
+    ]
+  }
+}

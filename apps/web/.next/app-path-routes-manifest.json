@@ -1,0 +1,19 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/favicon.ico/route": "/favicon.ico",
+  "/login/page": "/login",
+  "/insights/page": "/insights",
+  "/help/page": "/help",
+  "/page": "/",
+  "/maintenance/diagnostics/page": "/maintenance/diagnostics",
+  "/analytics/page": "/analytics",
+  "/dashboard/page": "/dashboard",
+  "/maintenance/logs/page": "/maintenance/logs",
+  "/maintenance/history/page": "/maintenance/history",
+  "/maintenance/parts/page": "/maintenance/parts",
+  "/programs/page": "/programs",
+  "/maintenance/page": "/maintenance",
+  "/settings/page": "/settings",
+  "/sweep/[id]/overview/page": "/sweep/[id]/overview",
+  "/sweep/[id]/page": "/sweep/[id]"
+}

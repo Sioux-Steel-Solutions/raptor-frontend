@@ -150,8 +150,11 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
   const [displayAngle, setDisplayAngle] = useState(0);
   const lastAngleRef = useRef(0);
 
+  // Check if camera feed should be available (Vercel only, not Pi nginx)
+  const cameraFeedAvailable = process.env.NEXT_PUBLIC_SHOW_CAMERA_FEED !== 'false';
+
   // Toggle between sweep position dial and camera feed
-  const [showCameraFeed, setShowCameraFeed] = useState(true);
+  const [showCameraFeed, setShowCameraFeed] = useState(false); // Default to position dial
 
 
   // Per-VFD telemetry (NEW - replaces fake temperature/humidity/chainRpm)
@@ -635,20 +638,22 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                 <CardTitle className="text-white flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <RotateCw className="w-5 h-5" />
-                    {showCameraFeed ? "Camera Feed" : "Sweep Position"}
+                    {cameraFeedAvailable && showCameraFeed ? "Camera Feed" : "Sweep Position"}
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowCameraFeed(!showCameraFeed)}
-                    className="bg-raptor-lightgray border-slate-600 text-white hover:bg-slate-600 text-xs h-7 px-2"
-                  >
-                    {showCameraFeed ? "Position" : "Camera"}
-                  </Button>
+                  {cameraFeedAvailable && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCameraFeed(!showCameraFeed)}
+                      className="bg-raptor-lightgray border-slate-600 text-white hover:bg-slate-600 text-xs h-7 px-2"
+                    >
+                      {showCameraFeed ? "Position" : "Camera"}
+                    </Button>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col items-center py-4">
-                {showCameraFeed ? (
+                {cameraFeedAvailable && showCameraFeed ? (
                   <>
                     <div className="relative w-full aspect-video mb-4 overflow-hidden rounded-lg bg-black">
                       {/* WebRTC stream via go2rtc - works for everyone */}
