@@ -14,7 +14,7 @@ set -e
 
 PI_HOST="${1:-raptor3}"
 PI_USER="pi"
-PI_DEST="/home/pi/raptor-frontend"
+PI_DEST="/var/www/raptor-frontend"
 PI_PASS="${PI_PASS:-b8rqse}"
 
 echo "=== Deploying raptor-frontend to $PI_HOST ==="
@@ -44,17 +44,23 @@ eval $SSH_CMD "$PI_USER@$PI_HOST" "cat > /tmp/raptor-frontend.nginx << 'NGINXEOF
 server {
     listen 80;
     server_name localhost;
-    root /home/pi/raptor-frontend;
+    root /var/www/raptor-frontend;
     index index.html;
 
-    location / {
-        try_files \$uri \$uri/ \$uri.html /index.html;
+    # API routes - return 404 (no backend on static deploy)
+    location /api/ {
+        return 404;
     }
 
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
+    # Static files with caching
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|webm)$ {
         expires 1y;
         add_header Cache-Control \"public, immutable\";
+    }
+
+    # SPA fallback for all other routes
+    location / {
+        try_files \$uri \$uri/ \$uri.html /index.html;
     }
 }
 NGINXEOF"
