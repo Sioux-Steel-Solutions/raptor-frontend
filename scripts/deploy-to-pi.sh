@@ -95,6 +95,43 @@ X-GNOME-Autostart-enabled=true
 DESKTOPEOF"
 
 echo ""
+echo "6. Running deployment health checks..."
+
+# Health check: Verify nginx is responding
+if eval $SSH_CMD "$PI_USER@$PI_HOST" "curl -s -o /dev/null -w '%{http_code}' http://localhost/" | grep -q "200"; then
+    echo "   ✓ nginx responding on http://localhost/"
+else
+    echo "   ✗ WARNING: nginx health check failed!"
+    eval $SSH_CMD "$PI_USER@$PI_HOST" "sudo tail -20 /var/log/nginx/error.log"
+    exit 1
+fi
+
+# Health check: Verify dashboard route loads
+if eval $SSH_CMD "$PI_USER@$PI_HOST" "curl -s -o /dev/null -w '%{http_code}' http://localhost/dashboard/" | grep -q "200"; then
+    echo "   ✓ Dashboard route accessible"
+else
+    echo "   ✗ WARNING: Dashboard route failed!"
+    exit 1
+fi
+
+# Health check: Verify static assets are being served
+if eval $SSH_CMD "$PI_USER@$PI_HOST" "curl -s -o /dev/null -w '%{http_code}' http://localhost/_next/static/" | grep -q "200\|404"; then
+    echo "   ✓ Static assets configured correctly"
+else
+    echo "   ✗ WARNING: Static asset serving failed!"
+    exit 1
+fi
+
+# Check nginx error logs for recent errors
+RECENT_ERRORS=$(eval $SSH_CMD "$PI_USER@$PI_HOST" "sudo tail -50 /var/log/nginx/error.log | grep -c 'error' || true")
+if [ "$RECENT_ERRORS" -gt 0 ]; then
+    echo "   ⚠ Found $RECENT_ERRORS recent errors in nginx log:"
+    eval $SSH_CMD "$PI_USER@$PI_HOST" "sudo tail -20 /var/log/nginx/error.log | grep 'error'"
+else
+    echo "   ✓ No recent errors in nginx log"
+fi
+
+echo ""
 echo "=== Deployment complete! ==="
 echo ""
 echo "Local HMI: http://$PI_HOST/"
