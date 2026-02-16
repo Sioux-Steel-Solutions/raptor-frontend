@@ -51,18 +51,27 @@ export default function SweepDetailPage() {
   const [motorLoad, setMotorLoad] = useState(30);
   const [vibration, setVibration] = useState(16);
 
-  // Refs for animation
-  const rafRef = useRef<number | null>(null);
-  const lastTsRef = useRef<number | null>(null);
-  const [angleRaw, setAngleRaw] = useState(0);
+  // Track continuous angle for smooth rotation across 0/360 boundary
+  const [displayAngle, setDisplayAngle] = useState(0);
+  const lastAngleRef = useRef(0);
   const SWEEP_RATE_DEG_PER_SEC = 2;
 
   // MQTT Connection
   const { isConnected, publish, subscribe, topics } = useMqtt({
     config: getConfigFromEnv(),
-    onMessage: (_topic, payload) => {
+    onMessage: (topic, payload) => {
       try {
         const data = JSON.parse(payload.toString());
+
+        // Handle sweep angle updates (dedicated topic for fast updates)
+        if (topic === 'raptor/sweep/1/angle') {
+          if (data.detecting && typeof data.angle === 'number') {
+            // Normalize incoming angle to 0-360
+            const newAngle = ((data.angle % 360) + 360) % 360;
+            setSweepPosition(newAngle);
+          }
+          return;
+        }
 
         // Running state
         if (
@@ -92,10 +101,11 @@ export default function SweepDetailPage() {
     },
   });
 
-  // Subscribe to state topic
+  // Subscribe to state topic and sweep angle topic
   useEffect(() => {
     if (isConnected) {
       subscribe(topics.state);
+      subscribe('raptor/sweep/1/angle'); // Subscribe to sweep angle topic
     }
   }, [isConnected, subscribe, topics.state]);
 
@@ -103,42 +113,31 @@ export default function SweepDetailPage() {
   useEffect(() => {
     if (sweep) {
       setSweepPosition(sweep.position);
-      setAngleRaw(sweep.position);
+      setDisplayAngle(sweep.position);
+      lastAngleRef.current = sweep.position;
       setIsRunning(sweep.isRunning);
     }
   }, [sweep]);
 
-  // Smooth rotation animation
+  // Update display angle using shortest path to avoid 360° spins
   useEffect(() => {
-    if (!isRunning) {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-      lastTsRef.current = null;
-      return;
-    }
+    const lastAngle = lastAngleRef.current;
+    const newAngle = sweepPosition;
 
-    const tick = (ts: number) => {
-      if (lastTsRef.current == null) lastTsRef.current = ts;
-      const dtSec = (ts - lastTsRef.current) / 1000;
-      lastTsRef.current = ts;
+    // Calculate difference taking shortest path
+    let diff = newAngle - lastAngle;
 
-      setAngleRaw((prev) => prev + SWEEP_RATE_DEG_PER_SEC * dtSec);
-      rafRef.current = requestAnimationFrame(tick);
-    };
+    // Normalize difference to -180 to +180 range
+    while (diff > 180) diff -= 360;
+    while (diff < -180) diff += 360;
 
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-      lastTsRef.current = null;
-    };
-  }, [isRunning]);
+    // Update display angle by adding the shortest difference
+    setDisplayAngle(prev => prev + diff);
+    lastAngleRef.current = newAngle;
+  }, [sweepPosition]);
 
-  // Keep position in sync
-  useEffect(() => {
-    const normalized = ((angleRaw % 360) + 360) % 360;
-    setSweepPosition(normalized);
-  }, [angleRaw]);
+  // Note: Position is now driven purely by MQTT data from YOLO detection
+  // No simulated rotation animation needed
 
   // Command helpers
   const handleStart = () => {
@@ -249,7 +248,7 @@ export default function SweepDetailPage() {
               <View
                 style={[
                   styles.compassNeedle,
-                  { transform: [{ rotate: `${angleRaw}deg` }] },
+                  { transform: [{ rotate: `${displayAngle}deg` }] },
                 ]}
               />
               {/* Center dot */}
