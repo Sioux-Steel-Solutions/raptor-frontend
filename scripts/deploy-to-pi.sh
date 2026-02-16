@@ -47,7 +47,15 @@ server {
     root /var/www/raptor-frontend;
     index index.html;
 
-    # API routes - return 404 (no backend on static deploy)
+    # Network status proxy to network-spinner service
+    location /api/network-status {
+        proxy_pass http://localhost:8111/status;
+        proxy_http_version 1.1;
+        proxy_set_header Connection \"\";
+        add_header Cache-Control \"no-store, no-cache, must-revalidate\";
+    }
+
+    # All other API routes - return 404 (no backend on static deploy)
     location /api/ {
         return 404;
     }
