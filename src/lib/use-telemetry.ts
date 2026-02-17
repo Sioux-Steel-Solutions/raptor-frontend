@@ -3,29 +3,29 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   getTelemetry,
+  getTelemetryHourly,
   getFaults,
   transformTelemetryForChart,
+  transformHourlyForChart,
   calculateSummary,
+  calculateSummaryFromHourly,
+  getDataBucket,
   type TelemetryRecord,
+  type TelemetryHourly,
   type FaultRecord,
   type ChartDataPoint,
   type TelemetrySummary,
+  type DataBucket,
 } from "./telemetry-service";
 
 // Simple environment detection
 function getDataMode(): "local" | "cloud" {
   if (typeof window === "undefined") return "cloud";
-
   const { hostname, port } = window.location;
-  const isLocalDev = (hostname === "localhost" || hostname === "127.0.0.1") &&
-                     (port === "3000" || port === "3001");
-
-  // On localhost dev, always use Supabase (cloud)
-  if (isLocalDev) return "cloud";
-
-  // On Pi (no port or port 80), use SQLite (local)
-  // For now, default to cloud since SQLite API isn't set up
-  return "cloud";
+  const isLocalDev =
+    (hostname === "localhost" || hostname === "127.0.0.1") &&
+    (port === "3000" || port === "3001");
+  return isLocalDev ? "cloud" : "cloud"; // Always cloud for now; swap second "cloud" to "local" on Pi
 }
 
 interface UseTelemetryOptions {
@@ -34,10 +34,12 @@ interface UseTelemetryOptions {
   refreshInterval?: number;
 }
 
-interface UseTelemetryResult {
+export interface UseTelemetryResult {
   data: TelemetryRecord[];
+  hourlyData: TelemetryHourly[];
   chartData: ChartDataPoint[];
   summary: TelemetrySummary;
+  bucket: DataBucket;
   isLoading: boolean;
   error: string | null;
   mode: "local" | "cloud";
@@ -45,56 +47,65 @@ interface UseTelemetryResult {
 }
 
 /**
- * Hook to fetch telemetry data
- * Re-fetches when hours or limit changes
+ * Unified telemetry hook.
+ * Automatically routes to the right data source based on hours:
+ *   live   (≤2h)   → raw telemetry records
+ *   recent (2–48h) → raw telemetry, bookend sampled
+ *   hourly (>48h)  → telemetry_hourly aggregates
  */
 export function useTelemetry(options: UseTelemetryOptions = {}): UseTelemetryResult {
-  const { hours = 24, limit = 500, refreshInterval = 30000 } = options;
+  const { hours = 1, refreshInterval = 30000 } = options;
+  const bucket = getDataBucket(hours);
 
   const [data, setData] = useState<TelemetryRecord[]>([]);
+  const [hourlyData, setHourlyData] = useState<TelemetryHourly[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mode] = useState<"local" | "cloud">(getDataMode);
 
   const fetchData = useCallback(async () => {
-    console.log(`[Telemetry] Fetching ${hours}h of data (limit: ${limit}, mode: ${mode})`);
     setIsLoading(true);
     setError(null);
 
     try {
-      const records = await getTelemetry(mode, { hours, limit });
-      console.log(`[Telemetry] Got ${records.length} records`);
-      setData(records);
+      if (bucket === "hourly") {
+        const days = Math.ceil(hours / 24);
+        const records = await getTelemetryHourly(mode, { days });
+        setHourlyData(records);
+        setData([]);
+      } else {
+        const records = await getTelemetry(mode, { hours });
+        setData(records);
+        setHourlyData([]);
+      }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to fetch telemetry";
-      console.error("[Telemetry] Error:", err);
-      setError(message);
+      setError(err instanceof Error ? err.message : "Failed to fetch telemetry");
     } finally {
       setIsLoading(false);
     }
-  }, [mode, hours, limit]);
+  }, [mode, hours, bucket]);
 
-  // Fetch on mount and when params change
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Auto-refresh
   useEffect(() => {
     if (refreshInterval <= 0) return;
     const interval = setInterval(fetchData, refreshInterval);
     return () => clearInterval(interval);
   }, [fetchData, refreshInterval]);
 
-  return {
-    data,
-    chartData: transformTelemetryForChart(data),
-    summary: calculateSummary(data),
-    isLoading,
-    error,
-    mode,
-    refresh: fetchData,
-  };
+  const chartData =
+    bucket === "hourly"
+      ? transformHourlyForChart(hourlyData)
+      : transformTelemetryForChart(data);
+
+  const summary =
+    bucket === "hourly"
+      ? calculateSummaryFromHourly(hourlyData)
+      : calculateSummary(data);
+
+  return { data, hourlyData, chartData, summary, bucket, isLoading, error, mode, refresh: fetchData };
 }
 
 interface UseFaultsResult {
@@ -104,9 +115,6 @@ interface UseFaultsResult {
   refresh: () => void;
 }
 
-/**
- * Hook to fetch fault history
- */
 export function useFaults(limit = 100): UseFaultsResult {
   const [data, setData] = useState<FaultRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -116,13 +124,11 @@ export function useFaults(limit = 100): UseFaultsResult {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-
     try {
       const records = await getFaults(mode, { limit });
       setData(records);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to fetch faults";
-      setError(message);
+      setError(err instanceof Error ? err.message : "Failed to fetch faults");
     } finally {
       setIsLoading(false);
     }

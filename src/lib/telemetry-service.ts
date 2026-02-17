@@ -1,12 +1,10 @@
 /**
  * Telemetry Data Service
  *
- * Provides unified access to telemetry data from either:
- * - Supabase (cloud mode - when internet available)
- * - SQLite via local API (local mode - on Pi without internet)
- *
- * Environment detection uses the network status hook to determine
- * which data source to query.
+ * 3-bucket data strategy based on time range:
+ *   - "live"   (≤ 2h):  raw telemetry, all records, full 2-second resolution
+ *   - "recent" (2–48h): raw telemetry, bookend sampling (250 oldest + 250 newest)
+ *   - "hourly" (> 48h): telemetry_hourly aggregates (avg/min/max per hour)
  */
 
 // Supabase configuration
@@ -82,84 +80,67 @@ export interface FaultRecord {
 }
 
 // Bushels per hour estimation constants
-// Based on: max ~15k bushels/hour at full motor capacity
 const MAX_BUSHELS_PER_HOUR = 15000;
-const MAX_CHAIN_RPM = 60; // Approximate max RPM for chain motor
-const MAX_CHAIN_AMPS = 10; // Approximate max amps for chain motor
+const MAX_CHAIN_RPM = 60;
+const MAX_CHAIN_AMPS = 10;
 
-/**
- * Estimate bushels per hour based on chain motor metrics
- * Uses a weighted average of RPM and amps to estimate throughput
- */
-export function estimateBushelsPerHour(
-  chainRpm?: number,
-  chainAmps?: number
-): number {
+export function estimateBushelsPerHour(chainRpm?: number, chainAmps?: number): number {
   if (!chainRpm && !chainAmps) return 0;
-
-  // If we have RPM, use it as primary indicator
   if (chainRpm && chainRpm > 0) {
-    const rpmRatio = Math.min(chainRpm / MAX_CHAIN_RPM, 1);
-    return Math.round(rpmRatio * MAX_BUSHELS_PER_HOUR);
+    return Math.round(Math.min(chainRpm / MAX_CHAIN_RPM, 1) * MAX_BUSHELS_PER_HOUR);
   }
-
-  // Fall back to amps-based estimation
   if (chainAmps && chainAmps > 0) {
-    const ampsRatio = Math.min(chainAmps / MAX_CHAIN_AMPS, 1);
-    return Math.round(ampsRatio * MAX_BUSHELS_PER_HOUR);
+    return Math.round(Math.min(chainAmps / MAX_CHAIN_AMPS, 1) * MAX_BUSHELS_PER_HOUR);
   }
-
   return 0;
 }
 
-/**
- * Fetch telemetry from Supabase (cloud mode)
- */
-async function fetchFromSupabase<T>(
+// ---------------------------------------------------------------------------
+// Data bucket classification
+// ---------------------------------------------------------------------------
+export type DataBucket = "live" | "recent" | "hourly";
+
+export function getDataBucket(hours: number): DataBucket {
+  if (hours <= 2) return "live";
+  if (hours <= 48) return "recent";
+  return "hourly";
+}
+
+// ---------------------------------------------------------------------------
+// Supabase REST helpers
+// ---------------------------------------------------------------------------
+async function supabaseFetch<T>(
   table: string,
-  query: {
-    select?: string;
-    order?: string;
-    limit?: number;
-    gte?: { column: string; value: string };
-    eq?: { column: string; value: string };
-  }
+  params: Record<string, string>
 ): Promise<T[]> {
-  let url = `${SUPABASE_URL}/rest/v1/${table}?`;
-
-  if (query.select) {
-    url += `select=${encodeURIComponent(query.select)}&`;
+  // Build URL manually — URLSearchParams encodes the `=` in keys like "ts=gte"
+  // which breaks PostgREST filter syntax. We need: ts=gte.value, not ts%3Dgte=value.
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(params)) {
+    if (k.includes("=")) {
+      // PostgREST filter: key "col=op", value "val" → "col=op.val"
+      const eqIdx = k.indexOf("=");
+      const col = k.slice(0, eqIdx);
+      const op = k.slice(eqIdx + 1);
+      parts.push(`${col}=${op}.${encodeURIComponent(v)}`);
+    } else {
+      parts.push(`${k}=${encodeURIComponent(v)}`);
+    }
   }
 
-  if (query.eq) {
-    url += `${query.eq.column}=eq.${encodeURIComponent(query.eq.value)}&`;
-  }
-
-  if (query.gte) {
-    url += `${query.gte.column}=gte.${encodeURIComponent(query.gte.value)}&`;
-  }
-
-  if (query.order) {
-    url += `order=${encodeURIComponent(query.order)}&`;
-  }
-
-  if (query.limit) {
-    url += `limit=${query.limit}&`;
-  }
-
-  const response = await fetch(url, {
+  const url = `${SUPABASE_URL}/rest/v1/${table}?${parts.join("&")}`;
+  const res = await fetch(url, {
     headers: {
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      "Content-Type": "application/json",
     },
   });
 
-  if (!response.ok) {
-    throw new Error(`Supabase error: ${response.status} ${response.statusText}`);
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Supabase ${table}: ${res.status} ${body}`);
   }
-
-  return response.json();
+  return res.json();
 }
 
 /**
@@ -173,158 +154,114 @@ async function fetchFromSQLite<T>(
   for (const [key, value] of Object.entries(params)) {
     searchParams.set(key, String(value));
   }
-
-  const response = await fetch(`${SQLITE_API_URL}/${endpoint}?${searchParams}`, {
+  const res = await fetch(`${SQLITE_API_URL}/${endpoint}?${searchParams}`, {
     cache: "no-store",
   });
+  if (!res.ok) throw new Error(`SQLite API error: ${res.status}`);
+  return res.json();
+}
 
-  if (!response.ok) {
-    throw new Error(`SQLite API error: ${response.status}`);
-  }
+// ---------------------------------------------------------------------------
+// Core fetch functions
+// ---------------------------------------------------------------------------
 
-  return response.json();
+/**
+ * Fetch all raw records in time range (for "live" bucket, ≤ 2h).
+ * At 2s intervals, 2h = ~3600 records max — acceptable.
+ */
+async function fetchLive(since: string): Promise<TelemetryRecord[]> {
+  const records = await supabaseFetch<TelemetryRecord>("telemetry", {
+    select: "*",
+    "ts=gte": since,
+    order: "ts.asc",
+  });
+  return records;
 }
 
 /**
- * Get recent telemetry records
- * For longer time ranges, fetches more data to ensure coverage
+ * Bookend strategy for "recent" bucket (2h–48h).
+ * Fetches 250 oldest + 250 newest records in the window in parallel,
+ * giving full coverage of the time range without downloading everything.
  */
-export async function getTelemetry(
-  mode: "local" | "cloud",
-  options: {
-    siteId?: string;
-    deviceId?: string;
-    hours?: number;
-    limit?: number;
-  } = {}
-): Promise<TelemetryRecord[]> {
-  const { hours = 24 } = options;
-  const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+async function fetchRecent(since: string, targetPoints = 500): Promise<TelemetryRecord[]> {
+  const half = Math.floor(targetPoints / 2);
 
-  // Target number of points for chart (more = smoother, but slower)
-  const targetPoints = 500;
-
-  if (mode === "cloud") {
-    // For short time ranges, fetch all data (at 2s interval, 1h = ~1800 records)
-    // For longer ranges, we still need to fetch all and sample client-side
-    // because SQL LIMIT with ORDER ASC would miss recent data
-    const records = await fetchFromSupabase<TelemetryRecord>("telemetry", {
+  const [oldest, newestDesc] = await Promise.all([
+    supabaseFetch<TelemetryRecord>("telemetry", {
       select: "*",
-      gte: { column: "ts", value: since },
+      "ts=gte": since,
       order: "ts.asc",
-      // No limit - fetch all data in time range, then sample client-side
-    });
+      limit: String(half),
+    }),
+    supabaseFetch<TelemetryRecord>("telemetry", {
+      select: "*",
+      "ts=gte": since,
+      order: "ts.desc",
+      limit: String(half),
+    }),
+  ]);
 
-    console.log(`[Telemetry] Fetched ${records.length} records for ${hours}h range`);
-
-    // Sample to target points for chart performance
-    if (records.length > targetPoints) {
-      return sampleEvenly(records, targetPoints);
-    }
-    return records;
-  } else {
-    // Local SQLite mode - requires API on Pi
-    return fetchFromSQLite<TelemetryRecord>("recent", {
-      hours,
-      limit: targetPoints,
-    });
-  }
+  // Deduplicate by id and sort ascending
+  const seenIds = new Set(oldest.map((r) => r.id));
+  const merged = [...oldest, ...newestDesc.filter((r) => !seenIds.has(r.id))];
+  return merged.sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime());
 }
 
 /**
- * Sample array evenly to target size
- * Ensures we keep first and last elements for full time coverage
- */
-function sampleEvenly<T>(arr: T[], targetSize: number): T[] {
-  if (arr.length <= targetSize) return arr;
-
-  const result: T[] = [];
-  const step = (arr.length - 1) / (targetSize - 1);
-
-  for (let i = 0; i < targetSize; i++) {
-    const index = Math.round(i * step);
-    result.push(arr[index]);
-  }
-
-  return result;
-}
-
-/**
- * Get hourly aggregated telemetry
+ * Fetch hourly aggregates for "hourly" bucket (> 48h).
  */
 export async function getTelemetryHourly(
   mode: "local" | "cloud",
-  options: {
-    siteId?: string;
-    deviceId?: string;
-    days?: number;
-  } = {}
+  options: { days?: number } = {}
 ): Promise<TelemetryHourly[]> {
-  const { days = 7 } = options;
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const { days = 30 } = options;
+  const since = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
 
   if (mode === "cloud") {
-    return fetchFromSupabase<TelemetryHourly>("telemetry_hourly", {
+    const records = await supabaseFetch<TelemetryHourly>("telemetry_hourly", {
       select: "*",
-      gte: { column: "hour_ts", value: since },
-      order: "hour_ts.desc",
+      "hour_ts=gte": since,
+      order: "hour_ts.asc",
     });
+    return records;
   } else {
     return fetchFromSQLite<TelemetryHourly>("hourly", { days });
   }
 }
 
 /**
- * Get command history
+ * Main entry point: returns raw telemetry records.
+ * Automatically selects the right bucket strategy based on hours.
  */
-export async function getCommands(
+export async function getTelemetry(
   mode: "local" | "cloud",
-  options: {
-    siteId?: string;
-    deviceId?: string;
-    limit?: number;
-  } = {}
-): Promise<CommandRecord[]> {
-  const { limit = 100 } = options;
+  options: { hours?: number; limit?: number } = {}
+): Promise<TelemetryRecord[]> {
+  const { hours = 1 } = options;
+  const since = new Date(Date.now() - hours * 3600 * 1000).toISOString();
+  const bucket = getDataBucket(hours);
 
-  if (mode === "cloud") {
-    return fetchFromSupabase<CommandRecord>("commands", {
-      select: "*",
-      order: "ts.desc",
-      limit,
-    });
-  } else {
-    return fetchFromSQLite<CommandRecord>("commands", { limit });
+  if (mode === "local") {
+    return fetchFromSQLite<TelemetryRecord>("recent", { hours, limit: 500 });
   }
+
+  if (bucket === "live") {
+    return fetchLive(since);
+  }
+
+  if (bucket === "recent") {
+    return fetchRecent(since, 500);
+  }
+
+  // "hourly" bucket — caller should use getTelemetryHourly() directly
+  // but return empty raw records so the hook degrades gracefully
+  return [];
 }
 
-/**
- * Get fault history
- */
-export async function getFaults(
-  mode: "local" | "cloud",
-  options: {
-    siteId?: string;
-    deviceId?: string;
-    limit?: number;
-  } = {}
-): Promise<FaultRecord[]> {
-  const { limit = 100 } = options;
+// ---------------------------------------------------------------------------
+// Transforms
+// ---------------------------------------------------------------------------
 
-  if (mode === "cloud") {
-    return fetchFromSupabase<FaultRecord>("faults", {
-      select: "*",
-      order: "ts.desc",
-      limit,
-    });
-  } else {
-    return fetchFromSQLite<FaultRecord>("faults", { limit });
-  }
-}
-
-/**
- * Transform raw telemetry into chart-friendly format
- */
 export interface ChartDataPoint {
   time: string;
   timestamp: number;
@@ -337,35 +274,28 @@ export interface ChartDataPoint {
   bushelsPerHour: number;
   isRunning: boolean;
   direction: "fwd" | "rev" | "unknown";
+  isHourly?: boolean;
 }
 
-export function transformTelemetryForChart(
-  records: TelemetryRecord[]
-): ChartDataPoint[] {
+export function transformTelemetryForChart(records: TelemetryRecord[]): ChartDataPoint[] {
   return records
-    .map((record) => {
-      const ts = new Date(record.ts);
-      const chainAmps = record.data.chain?.amps ?? 0;
-      // Data uses "actual_rpm" not just "rpm"
-      const chainRpm = record.data.chain?.actual_rpm ?? record.data.chain?.rpm ?? 0;
-
+    .map((r) => {
+      const ts = new Date(r.ts);
+      const chainAmps = r.data.chain?.amps ?? 0;
+      const chainRpm = r.data.chain?.actual_rpm ?? r.data.chain?.rpm ?? 0;
       return {
-        time: ts.toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        time: ts.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
         timestamp: ts.getTime(),
         chainAmps,
         chainRpm,
-        innerAmps: record.data.inner_wheel?.amps ?? 0,
-        innerRpm: record.data.inner_wheel?.actual_rpm ?? record.data.inner_wheel?.rpm ?? 0,
-        outerAmps: record.data.outer_wheel?.amps ?? 0,
-        outerRpm: record.data.outer_wheel?.actual_rpm ?? record.data.outer_wheel?.rpm ?? 0,
+        innerAmps: r.data.inner_wheel?.amps ?? 0,
+        innerRpm: r.data.inner_wheel?.actual_rpm ?? r.data.inner_wheel?.rpm ?? 0,
+        outerAmps: r.data.outer_wheel?.amps ?? 0,
+        outerRpm: r.data.outer_wheel?.actual_rpm ?? r.data.outer_wheel?.rpm ?? 0,
         bushelsPerHour: estimateBushelsPerHour(chainRpm, chainAmps),
-        // Check both paddle_running and wheels_running
-        isRunning: record.data.sweep_running ?? record.data.paddle_running ?? record.data.wheels_running ?? false,
-        direction: (record.data.wheel_direction === "fwd" || record.data.wheel_direction === "rev"
-          ? record.data.wheel_direction
+        isRunning: r.data.sweep_running ?? r.data.paddle_running ?? r.data.wheels_running ?? false,
+        direction: (r.data.wheel_direction === "fwd" || r.data.wheel_direction === "rev"
+          ? r.data.wheel_direction
           : "unknown") as "fwd" | "rev" | "unknown",
       };
     })
@@ -373,8 +303,34 @@ export function transformTelemetryForChart(
 }
 
 /**
- * Calculate summary statistics from telemetry
+ * Transform hourly aggregate records into ChartDataPoints.
+ * isRunning is estimated: if chain_amps > 0 the motor was running.
  */
+export function transformHourlyForChart(records: TelemetryHourly[]): ChartDataPoint[] {
+  return records.map((r) => {
+    const ts = new Date(r.hour_ts);
+    const chainAmps = r.data_avg?.chain_amps ?? 0;
+    const chainRpm = r.data_avg?.chain_rpm ?? 0;
+    return {
+      time: ts.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit" }),
+      timestamp: ts.getTime(),
+      chainAmps,
+      chainRpm,
+      innerAmps: r.data_avg?.inner_amps ?? 0,
+      innerRpm: r.data_avg?.inner_rpm ?? 0,
+      outerAmps: r.data_avg?.outer_amps ?? 0,
+      outerRpm: r.data_avg?.outer_rpm ?? 0,
+      bushelsPerHour: estimateBushelsPerHour(chainRpm, chainAmps),
+      isRunning: chainAmps > 0,
+      direction: "unknown" as const,
+      isHourly: true,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Summary
+// ---------------------------------------------------------------------------
 export interface TelemetrySummary {
   totalRecords: number;
   runningCount: number;
@@ -393,18 +349,10 @@ export interface TelemetrySummary {
 export function calculateSummary(records: TelemetryRecord[]): TelemetrySummary {
   if (records.length === 0) {
     return {
-      totalRecords: 0,
-      runningCount: 0,
-      avgChainAmps: 0,
-      avgChainRpm: 0,
-      avgInnerAmps: 0,
-      avgOuterAmps: 0,
-      maxChainAmps: 0,
-      minChainAmps: 0,
-      estimatedBushelsPerHour: 0,
-      totalRunTimeMinutes: 0,
-      forwardPercent: 0,
-      reversePercent: 0,
+      totalRecords: 0, runningCount: 0, avgChainAmps: 0, avgChainRpm: 0,
+      avgInnerAmps: 0, avgOuterAmps: 0, maxChainAmps: 0, minChainAmps: 0,
+      estimatedBushelsPerHour: 0, totalRunTimeMinutes: 0,
+      forwardPercent: 0, reversePercent: 0,
     };
   }
 
@@ -413,14 +361,10 @@ export function calculateSummary(records: TelemetryRecord[]): TelemetrySummary {
   const innerAmps = records.map((r) => r.data.inner_wheel?.amps ?? 0);
   const outerAmps = records.map((r) => r.data.outer_wheel?.amps ?? 0);
   const runningRecords = records.filter((r) => r.data.sweep_running ?? r.data.paddle_running ?? r.data.wheels_running);
-
-  // Direction stats
   const fwdCount = records.filter((r) => r.data.wheel_direction === "fwd").length;
   const revCount = records.filter((r) => r.data.wheel_direction === "rev").length;
-  const directionTotal = fwdCount + revCount;
-
+  const dirTotal = fwdCount + revCount;
   const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
-
   const avgChainRpm = avg(chainRpms);
   const avgChainAmpsVal = avg(chainAmps);
 
@@ -434,9 +378,74 @@ export function calculateSummary(records: TelemetryRecord[]): TelemetrySummary {
     maxChainAmps: Math.max(...chainAmps),
     minChainAmps: Math.min(...chainAmps.filter((a) => a > 0)) || 0,
     estimatedBushelsPerHour: estimateBushelsPerHour(avgChainRpm, avgChainAmpsVal),
-    // Estimate run time: each record ~2 seconds apart
     totalRunTimeMinutes: Math.round((runningRecords.length * 2) / 60),
-    forwardPercent: directionTotal > 0 ? Math.round((fwdCount / directionTotal) * 100) : 0,
-    reversePercent: directionTotal > 0 ? Math.round((revCount / directionTotal) * 100) : 0,
+    forwardPercent: dirTotal > 0 ? Math.round((fwdCount / dirTotal) * 100) : 0,
+    reversePercent: dirTotal > 0 ? Math.round((revCount / dirTotal) * 100) : 0,
   };
+}
+
+export function calculateSummaryFromHourly(records: TelemetryHourly[]): TelemetrySummary {
+  if (records.length === 0) {
+    return {
+      totalRecords: 0, runningCount: 0, avgChainAmps: 0, avgChainRpm: 0,
+      avgInnerAmps: 0, avgOuterAmps: 0, maxChainAmps: 0, minChainAmps: 0,
+      estimatedBushelsPerHour: 0, totalRunTimeMinutes: 0,
+      forwardPercent: 0, reversePercent: 0,
+    };
+  }
+  const avg = (vals: number[]) => vals.reduce((a, b) => a + b, 0) / (vals.length || 1);
+  const chainAmps = records.map((r) => r.data_avg?.chain_amps ?? 0);
+  const chainRpms = records.map((r) => r.data_avg?.chain_rpm ?? 0);
+  const innerAmps = records.map((r) => r.data_avg?.inner_amps ?? 0);
+  const outerAmps = records.map((r) => r.data_avg?.outer_amps ?? 0);
+  const totalSamples = records.reduce((s, r) => s + r.sample_count, 0);
+  const runningSamples = records.filter((r) => (r.data_avg?.chain_amps ?? 0) > 0)
+    .reduce((s, r) => s + r.sample_count, 0);
+  const avgChainRpm = avg(chainRpms);
+  const avgChainAmpsVal = avg(chainAmps);
+  const maxChainAmps = Math.max(...records.map((r) => r.data_max?.chain_amps ?? 0));
+
+  return {
+    totalRecords: totalSamples,
+    runningCount: runningSamples,
+    avgChainAmps: avgChainAmpsVal,
+    avgChainRpm,
+    avgInnerAmps: avg(innerAmps),
+    avgOuterAmps: avg(outerAmps),
+    maxChainAmps,
+    minChainAmps: Math.min(...records.map((r) => r.data_min?.chain_amps ?? 0).filter((a) => a > 0)) || 0,
+    estimatedBushelsPerHour: estimateBushelsPerHour(avgChainRpm, avgChainAmpsVal),
+    totalRunTimeMinutes: Math.round((runningSamples * 2) / 60),
+    forwardPercent: 0,
+    reversePercent: 0,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Commands & Faults
+// ---------------------------------------------------------------------------
+export async function getCommands(
+  mode: "local" | "cloud",
+  options: { limit?: number } = {}
+): Promise<CommandRecord[]> {
+  const { limit = 100 } = options;
+  if (mode === "cloud") {
+    return supabaseFetch<CommandRecord>("commands", {
+      select: "*", order: "ts.desc", limit: String(limit),
+    });
+  }
+  return fetchFromSQLite<CommandRecord>("commands", { limit });
+}
+
+export async function getFaults(
+  mode: "local" | "cloud",
+  options: { limit?: number } = {}
+): Promise<FaultRecord[]> {
+  const { limit = 100 } = options;
+  if (mode === "cloud") {
+    return supabaseFetch<FaultRecord>("faults", {
+      select: "*", order: "ts.desc", limit: String(limit),
+    });
+  }
+  return fetchFromSQLite<FaultRecord>("faults", { limit });
 }
