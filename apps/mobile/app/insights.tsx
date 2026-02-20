@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginRight: 8,
     borderRadius: 8,
-    backgroundColor: '#2d3548', // Exact card gray from design
+    backgroundColor: '#242c38', // Exact card gray from design
   },
   tabActive: {
     backgroundColor: '#fad512', // raptor-yellow
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: '#2d3548', // Exact card gray from design
+    backgroundColor: '#242c38', // Exact card gray from design
     borderWidth: 1,
     borderColor: '#475569',
     borderRadius: 6,
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   recommendationBox: {
-    backgroundColor: '#2d3548', // Exact card gray from design
+    backgroundColor: '#242c38', // Exact card gray from design
     borderLeftWidth: 4,
     borderLeftColor: '#fad512',
     borderRadius: 6,
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
   simulateButton: {
     flex: 1,
     paddingVertical: 8,
-    backgroundColor: '#2d3548', // Exact card gray from design
+    backgroundColor: '#242c38', // Exact card gray from design
     borderWidth: 1,
     borderColor: '#475569',
     borderRadius: 6,
@@ -724,7 +724,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   chatModal: {
-    backgroundColor: '#2d3548', // Exact card gray from design
+    backgroundColor: '#242c38', // Exact card gray from design
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     height: '80%',

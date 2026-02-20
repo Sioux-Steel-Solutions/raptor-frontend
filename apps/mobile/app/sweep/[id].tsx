@@ -15,11 +15,10 @@ import { useTheme } from '../../contexts/ThemeContext';
 import {
   Play,
   Square,
-  RotateCcw,
-  Thermometer,
-  Droplet,
+  ArrowRightLeft,
   Zap,
-  Activity
+  Gauge,
+  RotateCw
 } from 'lucide-react-native';
 
 interface VFDTelemetry {
@@ -41,15 +40,23 @@ export default function SweepDetailPage() {
   // State
   const [isRunning, setIsRunning] = useState(false);
   const [sweepPosition, setSweepPosition] = useState(0);
-  const [targetThroughput, setTargetThroughput] = useState(75);
-  const [currentThroughput, setCurrentThroughput] = useState(0);
-  const [chainRPM, setChainRPM] = useState(0);
 
-  // KPI State
-  const [temperature, setTemperature] = useState(75);
-  const [humidity, setHumidity] = useState(13);
-  const [motorLoad, setMotorLoad] = useState(30);
-  const [vibration, setVibration] = useState(16);
+  // Wheel speed control
+  const [wheelSpeed, setWheelSpeed] = useState(600);
+  const [wheelSpeedSlider, setWheelSpeedSlider] = useState([600]);
+
+  // Chain speed control
+  const [chainSpeed, setChainSpeed] = useState(420);
+  const [chainSpeedSlider, setChainSpeedSlider] = useState([420]);
+
+  // Direction control
+  const [wheelDirection, setWheelDirection] = useState<'fwd' | 'rev'>('fwd');
+
+  // Per-VFD telemetry
+  const [chainTelemetry, setChainTelemetry] = useState<VFDTelemetry | null>(null);
+  const [innerWheelTelemetry, setInnerWheelTelemetry] = useState<VFDTelemetry | null>(null);
+  const [outerWheelTelemetry, setOuterWheelTelemetry] = useState<VFDTelemetry | null>(null);
+  const [voltage, setVoltage] = useState<number>(0);
 
   // Track continuous angle for smooth rotation across 0/360 boundary
   const [displayAngle, setDisplayAngle] = useState(0);
@@ -81,19 +88,39 @@ export default function SweepDetailPage() {
           setIsRunning(data.wheels_running && data.paddle_running);
         }
 
-        // Chain RPM
-        if (data?.chain?.actual_rpm) {
-          setChainRPM(data.chain.actual_rpm);
+        // Parse per-VFD telemetry
+        if (data?.chain) {
+          setChainTelemetry(data.chain as VFDTelemetry);
+        }
+        if (data?.inner_wheel) {
+          setInnerWheelTelemetry(data.inner_wheel as VFDTelemetry);
+        }
+        if (data?.outer_wheel) {
+          setOuterWheelTelemetry(data.outer_wheel as VFDTelemetry);
         }
 
-        // Motor load (amps)
-        if (data?.chain?.amps) {
-          setMotorLoad(data.chain.amps);
+        // Voltage - use chain voltage if available, else flat field
+        if (data?.chain?.voltage) {
+          setVoltage(data.chain.voltage);
+        } else if (typeof data?.voltage === 'number') {
+          setVoltage(data.voltage);
         }
 
-        // Current throughput
-        if (typeof data?.current_throughput === 'number') {
-          setCurrentThroughput(data.current_throughput);
+        // Wheel direction
+        if (data?.wheel_direction === 'fwd' || data?.wheel_direction === 'rev') {
+          setWheelDirection(data.wheel_direction);
+        }
+
+        // Wheel speed
+        if (typeof data?.wheel_speed === 'number') {
+          setWheelSpeed(data.wheel_speed);
+          setWheelSpeedSlider([data.wheel_speed]);
+        }
+
+        // Chain speed
+        if (typeof data?.chain_speed === 'number') {
+          setChainSpeed(data.chain_speed);
+          setChainSpeedSlider([data.chain_speed]);
         }
       } catch {
         // ignore
@@ -156,10 +183,28 @@ export default function SweepDetailPage() {
     publish(topics.cmd, payload, { qos: 1 });
   };
 
-  const handleReset = () => {
-    // Reset to 0 degrees
-    setAngleRaw(0);
-    setSweepPosition(0);
+  const handleDirectionToggle = () => {
+    const newDirection = wheelDirection === 'fwd' ? 'rev' : 'fwd';
+    const payload = JSON.stringify({
+      wheel_direction: newDirection,
+    });
+    publish(topics.cmd, payload, { qos: 1 });
+    // Optimistic update
+    setWheelDirection(newDirection);
+  };
+
+  const handleWheelSpeedChange = (value: number) => {
+    const payload = JSON.stringify({
+      wheel_speed: value,
+    });
+    publish(topics.cmd, payload, { qos: 1 });
+  };
+
+  const handleChainSpeedChange = (value: number) => {
+    const payload = JSON.stringify({
+      chain_speed: value,
+    });
+    publish(topics.cmd, payload, { qos: 1 });
   };
 
   if (!sweep) {
@@ -200,27 +245,38 @@ export default function SweepDetailPage() {
 
         {/* KPIs Section */}
         <View style={styles.kpiContainer}>
+          {/* Chain Motor */}
           <View style={styles.kpiCard}>
-            <Thermometer size={20} color="#ef4444" />
-            <Text style={styles.kpiValue}>{temperature}°F</Text>
-            <Text style={styles.kpiLabel}>Temperature</Text>
+            <Gauge size={20} color="#f97316" />
+            <Text style={styles.kpiValueLarge}>{chainTelemetry?.actual_rpm ?? 0}</Text>
+            <Text style={styles.kpiLabel}>Chain Motor</Text>
+            <Text style={styles.kpiSubLabel}>{chainTelemetry?.amps?.toFixed(1) ?? '0.0'}A</Text>
           </View>
+
+          {/* Tractor Motor 1 (Inner Wheel) */}
           <View style={styles.kpiCard}>
-            <Droplet size={20} color="#3b82f6" />
-            <Text style={styles.kpiValue}>{humidity}%</Text>
-            <Text style={styles.kpiLabel}>Humidity</Text>
+            <RotateCw size={20} color="#3b82f6" />
+            <Text style={styles.kpiValueLarge}>{innerWheelTelemetry?.actual_rpm ?? 0}</Text>
+            <Text style={styles.kpiLabel}>Tractor 1</Text>
+            <Text style={styles.kpiSubLabel}>{innerWheelTelemetry?.amps?.toFixed(1) ?? '0.0'}A</Text>
           </View>
+
+          {/* Tractor Motor 2 (Outer Wheel) */}
           <View style={styles.kpiCard}>
-            <Zap size={20} color="#fad512" />
-            <Text style={styles.kpiValue}>{motorLoad} amps</Text>
-            <Text style={styles.kpiLabel}>Motor Load</Text>
-            <Text style={styles.kpiSubLabel}>Current Load</Text>
+            <RotateCw size={20} color="#22c55e" />
+            <Text style={styles.kpiValueLarge}>{outerWheelTelemetry?.actual_rpm ?? 0}</Text>
+            <Text style={styles.kpiLabel}>Tractor 2</Text>
+            <Text style={styles.kpiSubLabel}>{outerWheelTelemetry?.amps?.toFixed(1) ?? '0.0'}A</Text>
           </View>
+
+          {/* DC Bus Voltage */}
           <View style={styles.kpiCard}>
-            <Activity size={20} color="#a855f7" />
-            <Text style={styles.kpiValue}>{vibration} mm/s</Text>
-            <Text style={styles.kpiLabel}>Vibration</Text>
-            <Text style={styles.kpiSubLabel}>RMS Velocity</Text>
+            <View style={styles.voltageIconContainer}>
+              <Zap size={16} color="#ffffff" />
+            </View>
+            <Text style={styles.kpiValueLarge}>{voltage.toFixed(0)}V</Text>
+            <Text style={styles.kpiLabel}>DC Bus</Text>
+            <Text style={styles.kpiSubLabel}>480V 3φ</Text>
           </View>
         </View>
 
@@ -278,7 +334,7 @@ export default function SweepDetailPage() {
               ]}
             >
               <Play size={20} color="#ffffff" fill="#ffffff" />
-              <Text style={styles.controlButtonText}>Start</Text>
+              <Text style={styles.controlButtonText}>START</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -291,90 +347,103 @@ export default function SweepDetailPage() {
               ]}
             >
               <Square size={18} color="#ffffff" fill="#ffffff" />
-              <Text style={styles.controlButtonText}>Stop</Text>
+              <Text style={styles.controlButtonText}>STOP</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={handleReset}
+              onPress={handleDirectionToggle}
               disabled={!isConnected}
               style={[
                 styles.controlButton,
-                styles.resetButton,
+                wheelDirection === 'fwd' ? styles.directionFwdButton : styles.directionRevButton,
                 !isConnected && styles.disabledButton,
               ]}
             >
-              <RotateCcw size={20} color="#1e293b" />
-              <Text style={styles.resetButtonText}>Reset</Text>
+              <ArrowRightLeft size={20} color="#ffffff" />
+              <Text style={styles.controlButtonText}>
+                {wheelDirection === 'fwd' ? 'FWD' : 'REV'}
+              </Text>
             </TouchableOpacity>
           </View>
 
-          {/* Target Throughput Slider */}
+          {/* Wheel Speed Control */}
           <View style={styles.sliderContainer}>
             <View style={styles.sliderHeader}>
-              <Text style={styles.sliderLabel}>Target Throughput</Text>
-              <Text style={styles.sliderValueLabel}>{Math.round(targetThroughput)} bu/hr</Text>
+              <View style={styles.sliderHeaderLeft}>
+                <Gauge size={16} color="#3b82f6" />
+                <Text style={styles.sliderLabel}>Wheel Speed</Text>
+              </View>
+              <View style={styles.sliderValueBadge}>
+                <Text style={styles.sliderValueBadgeText}>{wheelSpeed}</Text>
+              </View>
             </View>
             <Slider
               containerStyle={styles.sliderWrapper}
               trackStyle={styles.sliderTrack}
               minimumTrackStyle={styles.sliderMinimumTrack}
               thumbStyle={styles.sliderThumb}
-              minimumValue={0}
-              maximumValue={150}
-              value={targetThroughput}
-              onValueChange={(value) => setTargetThroughput(Array.isArray(value) ? value[0] : value)}
+              minimumValue={100}
+              maximumValue={1500}
+              step={50}
+              value={wheelSpeedSlider}
+              onValueChange={(value) => setWheelSpeedSlider(Array.isArray(value) ? value : [value])}
+              onSlidingComplete={(value) => {
+                const val = Array.isArray(value) ? value[0] : value;
+                handleWheelSpeedChange(val);
+              }}
               disabled={!isConnected}
-              minimumTrackTintColor="#fad512"
+              minimumTrackTintColor="#3b82f6"
               maximumTrackTintColor="#4b5663"
               thumbTintColor="#ffffff"
             />
             <View style={styles.sliderLabels}>
-              <Text style={styles.sliderLabelText}>0 bu/hr</Text>
-              <Text style={styles.sliderLabelText}>75 bu/hr</Text>
-              <Text style={styles.sliderLabelText}>150 bu/hr</Text>
+              <Text style={styles.sliderLabelText}>100</Text>
+              <Text style={styles.sliderLabelText}>800</Text>
+              <Text style={styles.sliderLabelText}>1500</Text>
             </View>
           </View>
 
-          {/* Current Throughput Display */}
+          {/* Chain Speed Control */}
           <View style={styles.sliderContainer}>
             <View style={styles.sliderHeader}>
-              <Text style={styles.sliderLabel}>Current Throughput</Text>
-              <Text style={styles.sliderValueLabel}>{currentThroughput.toFixed(1)} bu/hr</Text>
+              <View style={styles.sliderHeaderLeft}>
+                <Gauge size={16} color="#f97316" />
+                <Text style={styles.sliderLabel}>Chain Speed</Text>
+              </View>
+              <View style={[styles.sliderValueBadge, styles.chainSpeedBadge]}>
+                <Text style={styles.sliderValueBadgeText}>{chainSpeed}</Text>
+                {chainTelemetry?.drive_state === 1 && (
+                  <View style={styles.chainRpmIndicator}>
+                    <RotateCw size={10} color="#22c55e" />
+                    <Text style={styles.chainRpmText}>{chainTelemetry.actual_rpm}</Text>
+                  </View>
+                )}
+              </View>
             </View>
             <Slider
               containerStyle={styles.sliderWrapper}
               trackStyle={styles.sliderTrack}
               minimumTrackStyle={styles.sliderMinimumTrack}
-              thumbStyle={styles.sliderThumbReadonly}
-              minimumValue={0}
-              maximumValue={150}
-              value={currentThroughput}
-              disabled={true}
-              minimumTrackTintColor="#4b5663"
+              thumbStyle={styles.sliderThumb}
+              minimumValue={100}
+              maximumValue={1200}
+              step={50}
+              value={chainSpeedSlider}
+              onValueChange={(value) => setChainSpeedSlider(Array.isArray(value) ? value : [value])}
+              onSlidingComplete={(value) => {
+                const val = Array.isArray(value) ? value[0] : value;
+                handleChainSpeedChange(val);
+              }}
+              disabled={!isConnected}
+              minimumTrackTintColor="#f97316"
               maximumTrackTintColor="#4b5663"
-              thumbTintColor="#94a3b8"
+              thumbTintColor="#ffffff"
             />
-          </View>
-
-          {/* Chain RPM Display */}
-          <View style={styles.sliderContainer}>
-            <View style={styles.sliderHeader}>
-              <Text style={styles.sliderLabel}>Chain RPM</Text>
-              <Text style={styles.sliderValueLabel}>{chainRPM} RPM</Text>
+            <View style={styles.sliderLabels}>
+              <Text style={styles.sliderLabelText}>100</Text>
+              <Text style={styles.sliderLabelText}>650</Text>
+              <Text style={styles.sliderLabelText}>1200</Text>
             </View>
-            <Slider
-              containerStyle={styles.sliderWrapper}
-              trackStyle={styles.sliderTrack}
-              minimumTrackStyle={styles.sliderMinimumTrack}
-              thumbStyle={styles.sliderThumbReadonly}
-              minimumValue={0}
-              maximumValue={1800}
-              value={chainRPM}
-              disabled={true}
-              minimumTrackTintColor="#22c55e"
-              maximumTrackTintColor="#ef4444"
-              thumbTintColor="#94a3b8"
-            />
           </View>
         </View>
 
@@ -456,11 +525,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
   },
-  kpiValue: {
-    fontSize: 14,
+  kpiValueLarge: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#ffffff',
     marginTop: 2,
+    fontVariant: ['tabular-nums'],
   },
   kpiLabel: {
     fontSize: 10,
@@ -468,9 +538,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   kpiSubLabel: {
-    fontSize: 8,
-    color: '#64748b',
+    fontSize: 9,
+    color: '#94a3b8',
     textAlign: 'center',
+    fontVariant: ['tabular-nums'],
+  },
+  voltageIconContainer: {
+    width: 24,
+    height: 24,
+    backgroundColor: '#a855f7',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Position Section
@@ -616,19 +695,17 @@ const styles = StyleSheet.create({
   stopButton: {
     backgroundColor: '#ef4444', // red
   },
-  resetButton: {
-    backgroundColor: '#ffffff',
+  directionFwdButton: {
+    backgroundColor: '#22c55e', // green for FWD
+  },
+  directionRevButton: {
+    backgroundColor: '#3b82f6', // blue for REV
   },
   disabledButton: {
     opacity: 0.5,
   },
   controlButtonText: {
     color: '#ffffff',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  resetButtonText: {
-    color: '#1e293b',
     fontSize: 15,
     fontWeight: 'bold',
   },
@@ -642,15 +719,44 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  sliderHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   sliderLabel: {
     fontSize: 14,
     color: '#ffffff',
     fontWeight: '600',
   },
-  sliderValueLabel: {
-    fontSize: 16,
+  sliderValueBadge: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  chainSpeedBadge: {
+    backgroundColor: '#f97316',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  sliderValueBadgeText: {
+    fontSize: 14,
     color: '#ffffff',
     fontWeight: 'bold',
+    fontVariant: ['tabular-nums'],
+  },
+  chainRpmIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  chainRpmText: {
+    fontSize: 11,
+    color: '#22c55e',
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
   },
   sliderWrapper: {
     height: 40,
@@ -674,12 +780,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
-  },
-  sliderThumbReadonly: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#94a3b8',
   },
   sliderLabels: {
     flexDirection: 'row',

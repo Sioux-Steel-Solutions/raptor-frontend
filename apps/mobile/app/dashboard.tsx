@@ -13,8 +13,9 @@ import { mockSweepData, SweepData } from '@raptor/shared';
 import { Card, CardHeader, CardContent, CardTitle } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { useTheme } from '../contexts/ThemeContext';
+import { LayoutGrid, List, Map } from 'lucide-react-native';
 
-type ViewMode = 'grid' | 'list';
+type ViewMode = 'grid' | 'list' | 'map';
 
 function GridOverview({ sweeps }: { sweeps: SweepData[] }) {
   const router = useRouter();
@@ -55,25 +56,25 @@ function GridOverview({ sweeps }: { sweeps: SweepData[] }) {
     <View style={styles.gridContainer}>
       {/* Overview Stats */}
       <View style={styles.statsGrid}>
-        <Card style={[styles.statCard, { backgroundColor: colors.card }]}>
+        <Card style={styles.statCard}>
           <CardContent style={styles.statCardContent}>
             <Text style={styles.statValue}>{sweeps.length}</Text>
             <Text style={styles.statLabel}>Total Sweeps</Text>
           </CardContent>
         </Card>
-        <Card style={[styles.statCard, { backgroundColor: colors.card }]}>
+        <Card style={styles.statCard}>
           <CardContent style={styles.statCardContent}>
             <Text style={[styles.statValue, styles.statValueGreen]}>{runningCount}</Text>
             <Text style={styles.statLabel}>Running</Text>
           </CardContent>
         </Card>
-        <Card style={[styles.statCard, { backgroundColor: colors.card }]}>
+        <Card style={styles.statCard}>
           <CardContent style={styles.statCardContent}>
             <Text style={[styles.statValue, styles.statValueYellow]}>{warningCount}</Text>
             <Text style={styles.statLabel}>Alerts</Text>
           </CardContent>
         </Card>
-        <Card style={[styles.statCard, { backgroundColor: colors.card }]}>
+        <Card style={styles.statCard}>
           <CardContent style={styles.statCardContent}>
             <Text style={[styles.statValue, styles.statValueGray]}>
               {sweeps.length - runningCount}
@@ -163,16 +164,16 @@ function ListView({ sweeps }: { sweeps: SweepData[] }) {
   const router = useRouter();
   const { theme, colors } = useTheme();
 
-  const getStatusColor = (status: SweepData['status']) => {
+  const getStatusVariant = (status: SweepData['status']) => {
     switch (status) {
       case 'optimal':
-        return '#22c55e'; // green-400
+        return 'optimal';
       case 'warning':
-        return '#facc15'; // yellow-400
+        return 'warning';
       case 'error':
-        return '#f87171'; // red-400
+        return 'error';
       default:
-        return '#9ca3af'; // gray-400
+        return 'stopped';
     }
   };
 
@@ -191,43 +192,77 @@ function ListView({ sweeps }: { sweeps: SweepData[] }) {
 
   return (
     <View style={styles.listContainer}>
-      <Card style={styles.listCard}>
-        <CardContent style={styles.listCardContent}>
-          {sweeps.map((sweep, index) => (
-            <Pressable
-              key={sweep.id}
-              onPress={() => router.push(`/sweep/${sweep.id}` as any)}
-              style={[
-                styles.listRow,
-                index !== sweeps.length - 1 && styles.listRowBorder,
-              ]}
-            >
-              <View style={styles.listCell}>
-                <Text style={styles.listCellHeader}>ID</Text>
-                <Text style={styles.listCellValue}>{sweep.id}</Text>
+      {sweeps.map((sweep) => (
+        <Pressable
+          key={sweep.id}
+          onPress={() => router.push(`/sweep/${sweep.id}` as any)}
+        >
+          <Card style={styles.listItemCard}>
+            <CardContent style={styles.listItemContent}>
+              {/* Left: Position Circle */}
+              <View style={styles.listItemPosition}>
+                <View style={styles.positionCircle}>
+                  <View
+                    style={[
+                      styles.positionNeedle,
+                      { transform: [{ rotate: `${sweep.position}deg` }] },
+                    ]}
+                  />
+                  <View style={styles.positionCenter} />
+                </View>
+                <Text style={styles.listPositionValue}>{sweep.position}°</Text>
               </View>
-              <View style={styles.listCell}>
-                <Text style={styles.listCellHeader}>Zone</Text>
-                <Text style={styles.listCellValueSecondary}>{sweep.zone}</Text>
+
+              {/* Middle: Metrics */}
+              <View style={styles.listItemMiddle}>
+                <View style={styles.listMetricRow}>
+                  <Text style={styles.listMetricLabel}>Chain RPM</Text>
+                  <Text style={styles.listMetricValue}>
+                    {(sweep.position * 2.5).toFixed(0)}
+                  </Text>
+                </View>
+                <View style={styles.listMetricRow}>
+                  <Text style={styles.listMetricLabel}>Wheels RPM</Text>
+                  <Text style={styles.listMetricValue}>
+                    {(sweep.position * 1.8).toFixed(0)}
+                  </Text>
+                </View>
+                <View style={styles.listThroughputSection}>
+                  <View style={styles.listThroughputItem}>
+                    <Text style={styles.listThroughputLabel}>Throughput</Text>
+                    <Text style={styles.listThroughputValue}>
+                      {sweep.throughput.toFixed(0)} bu/hr
+                    </Text>
+                  </View>
+                  <View style={styles.listThroughputItem}>
+                    <Text style={styles.listThroughputLabel}>Target</Text>
+                    <Text style={styles.listThroughputValue}>
+                      {sweep.targetThroughput.toFixed(0)} bu/hr
+                    </Text>
+                  </View>
+                </View>
               </View>
-              <View style={styles.listCell}>
-                <Text style={styles.listCellHeader}>Status</Text>
-                <Text style={[styles.listCellValue, { color: getStatusColor(sweep.status) }]}>
+
+              {/* Right: Bin Info */}
+              <View style={styles.listItemRight}>
+                <Text style={styles.listBinId}>{sweep.id}</Text>
+                <Text style={styles.listBinZone}>{sweep.zone}</Text>
+                <Badge variant={getStatusVariant(sweep.status)}>
                   {getStatusText(sweep.status)}
-                </Text>
+                </Badge>
               </View>
-              <View style={styles.listCell}>
-                <Text style={styles.listCellHeader}>Position</Text>
-                <Text style={styles.listCellValue}>{sweep.position}°</Text>
-              </View>
-              <View style={styles.listCell}>
-                <Text style={styles.listCellHeader}>Throughput</Text>
-                <Text style={styles.listCellValue}>{sweep.throughput.toFixed(1)} t/hr</Text>
-              </View>
-            </Pressable>
-          ))}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+function MapView({ sweeps }: { sweeps: SweepData[] }) {
+  return (
+    <View style={styles.mapContainer}>
+      <Text style={styles.mapPlaceholder}>Map View Coming Soon</Text>
     </View>
   );
 }
@@ -246,54 +281,53 @@ export default function DashboardPage() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <Image
-              source={require('../assets/raptor_icon_yellow.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.headerTitle}>Dashboard</Text>
-          </View>
-          <View style={styles.viewModeToggle}>
-            <TouchableOpacity
-              onPress={() => setViewMode('grid')}
-              style={[
-                styles.viewModeButton,
-                viewMode === 'grid' && styles.viewModeButtonActive,
-              ]}
-            >
-              {viewMode === 'grid' && <View style={styles.viewModeIndicator} />}
-              <Text
-                style={[
-                  styles.viewModeButtonText,
-                  viewMode === 'grid' && styles.viewModeButtonTextActive,
-                ]}
+            <View style={styles.headerLeft}>
+              <Image
+                source={require('../assets/raptor_icon_yellow.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+              <Text style={styles.headerTitle}>Home</Text>
+            </View>
+            <View style={styles.viewModeToggle}>
+              <TouchableOpacity
+                onPress={() => setViewMode('grid')}
+                style={styles.viewModeIconButton}
               >
-                Grid
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setViewMode('list')}
-              style={[
-                styles.viewModeButton,
-                viewMode === 'list' && styles.viewModeButtonActive,
-              ]}
-            >
-              {viewMode === 'list' && <View style={styles.viewModeIndicator} />}
-              <Text
-                style={[
-                  styles.viewModeButtonText,
-                  viewMode === 'list' && styles.viewModeButtonTextActive,
-                ]}
+                <LayoutGrid
+                  size={24}
+                  color={viewMode === 'grid' ? '#fad512' : '#94a3b8'}
+                  strokeWidth={2}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setViewMode('list')}
+                style={styles.viewModeIconButton}
               >
-                List
-              </Text>
-            </TouchableOpacity>
+                <List
+                  size={24}
+                  color={viewMode === 'list' ? '#fad512' : '#94a3b8'}
+                  strokeWidth={2}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setViewMode('map')}
+                style={styles.viewModeIconButton}
+              >
+                <Map
+                  size={24}
+                  color={viewMode === 'map' ? '#fad512' : '#94a3b8'}
+                  strokeWidth={2}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
         {/* Content */}
         {viewMode === 'grid' && <GridOverview sweeps={sweeps} />}
         {viewMode === 'list' && <ListView sweeps={sweeps} />}
+        {viewMode === 'map' && <MapView sweeps={sweeps} />}
       </ScrollView>
     </View>
   );
@@ -316,8 +350,12 @@ const styles = StyleSheet.create({
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
-    marginBottom: 16,
   },
   logo: {
     width: 60,
@@ -330,38 +368,11 @@ const styles = StyleSheet.create({
   },
   viewModeToggle: {
     flexDirection: 'row',
-    gap: 4,
-  },
-  viewModeButton: {
-    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-    backgroundColor: '#2d3548', // raptor-gray - exactly matching web
-    position: 'relative',
+    gap: 12,
   },
-  viewModeButtonActive: {
-    backgroundColor: '#4b5663', // raptor-lightgray - exactly matching web
-  },
-  viewModeIndicator: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    backgroundColor: '#fad512', // raptor-yellow - exactly matching web
-    borderTopLeftRadius: 6,
-    borderBottomLeftRadius: 6,
-  },
-  viewModeButtonText: {
-    color: '#94a3b8', // slate-400
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  viewModeButtonTextActive: {
-    color: '#ffffff',
-    marginLeft: 4,
+  viewModeIconButton: {
+    padding: 4,
   },
   gridContainer: {
     gap: 16,
@@ -441,7 +452,7 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     borderWidth: 2,
     borderColor: '#fad512', // raptor-yellow - exactly matching web
-    backgroundColor: '#2d3548', // raptor-gray - exactly matching web
+    backgroundColor: '#242c38', // matches card background
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
@@ -499,38 +510,88 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   listContainer: {
-    gap: 16,
-  },
-  listCard: {
-    width: '100%',
-  },
-  listCardContent: {
-    padding: 0,
-  },
-  listRow: {
-    padding: 16,
     gap: 12,
   },
-  listRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155', // slate-700
+  listItemCard: {
+    width: '100%',
   },
-  listCell: {
+  listItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 16,
+  },
+  listItemPosition: {
+    alignItems: 'center',
     gap: 4,
   },
-  listCellHeader: {
-    fontSize: 12,
-    color: '#cbd5e1', // slate-300
-    fontWeight: '500',
-  },
-  listCellValue: {
+  listPositionValue: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#ffffff',
     fontVariant: ['tabular-nums'],
   },
-  listCellValueSecondary: {
+  listItemMiddle: {
+    flex: 1,
+    gap: 8,
+  },
+  listMetricRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  listMetricLabel: {
+    fontSize: 12,
+    color: '#94a3b8',
+  },
+  listMetricValue: {
     fontSize: 14,
-    color: '#cbd5e1', // slate-300
+    fontWeight: '600',
+    color: '#ffffff',
+    fontVariant: ['tabular-nums'],
+  },
+  listThroughputSection: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 4,
+  },
+  listThroughputItem: {
+    gap: 2,
+  },
+  listThroughputLabel: {
+    fontSize: 11,
+    color: '#94a3b8',
+  },
+  listThroughputValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#ffffff',
+    fontVariant: ['tabular-nums'],
+  },
+  listItemRight: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  listBinId: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  listBinZone: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginBottom: 4,
+  },
+  mapContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  mapPlaceholder: {
+    fontSize: 18,
+    color: '#94a3b8',
+    textAlign: 'center',
   },
 });

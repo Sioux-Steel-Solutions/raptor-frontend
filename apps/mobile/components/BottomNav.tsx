@@ -29,7 +29,7 @@ export function BottomNav() {
   ];
 
   return (
-    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 8), backgroundColor: colors.card, borderTopColor: colors.border }]}>
+    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 8), borderTopColor: colors.border }]}>
       {navItems.map((item, idx) => {
         const isActive =
           pathname === item.href ||

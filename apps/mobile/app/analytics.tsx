@@ -5,209 +5,177 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
+  ActivityIndicator,
   Image,
   Dimensions,
+  RefreshControl,
+  TextInput,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
+import { AlertTriangle, Zap, Activity, RefreshCw, Search, ChevronDown } from 'lucide-react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import {
-  ChevronDown,
-  ChevronUp,
-  Search,
-  AlertTriangle,
-  Trophy,
-  Activity,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react-native';
+import { useTelemetry, useFaults } from '../lib/use-telemetry';
+import { mockSweepData } from '@raptor/shared';
+import { Card, CardHeader, CardContent, CardTitle } from '../components/ui/Card';
 
 const screenWidth = Dimensions.get('window').width;
 
+const TIME_RANGES = [
+  { label: '60s', hours: 1 / 60 },
+  { label: '5m', hours: 5 / 60 },
+  { label: '1h', hours: 1 },
+  { label: '6h', hours: 6 },
+  { label: '24h', hours: 24 },
+  { label: '7d', hours: 168 },
+  { label: '30d', hours: 720 },
+];
+
+function formatTimestamp(ts: number, hours: number): string {
+  const date = new Date(ts);
+  if (hours <= 1 / 60) {
+    return date.toLocaleTimeString('en-US', { minute: '2-digit', second: '2-digit' });
+  } else if (hours <= 5 / 60) {
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  } else if (hours <= 24) {
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  } else {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+}
+
+// Sample array to N evenly spaced items for chart labels
+function sampleLabels<T>(arr: T[], count: number): T[] {
+  if (arr.length <= count) return arr;
+  const step = (arr.length - 1) / (count - 1);
+  return Array.from({ length: count }, (_, i) => arr[Math.round(i * step)]);
+}
+
 export default function AnalyticsPage() {
-  const { theme, colors } = useTheme();
-
-  // Dropdown states
-  const [viewMode, setViewMode] = useState('Individual Sweep');
-  const [timeRange, setTimeRange] = useState('Last 24 Hours');
-
-  // Section collapse states
-  const [performanceAlertsOpen, setPerformanceAlertsOpen] = useState(true);
-  const [topPerformersOpen, setTopPerformersOpen] = useState(false);
-
-  // Sweep selection
-  const [selectedSweep, setSelectedSweep] = useState<string | null>(null);
+  const { colors } = useTheme();
+  const [selectedRange, setSelectedRange] = useState(TIME_RANGES[2]); // default 1h
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedSweep, setSelectedSweep] = useState('SA-001');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Chart carousel
-  const [currentChartIndex, setCurrentChartIndex] = useState(0);
-  const scrollViewRef = React.useRef<ScrollView>(null);
+  const { chartData, summary, isLoading, error, refresh } = useTelemetry({
+    hours: selectedRange.hours,
+    refreshInterval: 30000,
+  });
 
-  // Mock sweep data
-  const sweeps = [
-    { id: '1', zone: 'A' },
-    { id: '2', zone: 'A' },
-    { id: '3', zone: 'B' },
-    { id: '4', zone: 'B' },
-  ];
+  const { data: faults } = useFaults(50);
 
-  const topPerformers = [
-    { rank: 1, id: '5', zone: 'A', buPerHr: 144.7 },
-    { rank: 2, id: '26', zone: 'C', buPerHr: 141.0 },
-    { rank: 3, id: '15', zone: 'B', buPerHr: 139.8 },
-  ];
-
-  // Multiple charts data
-  const charts = [
-    {
-      title: 'Target VS Actual Throughput',
-      data: {
-        labels: ['12:00AM', '1:00 AM', '2:00 AM', '3:00 AM', '4:00 AM', '5:00 AM', 'Current'],
-        datasets: [
-          {
-            data: [110, 95, 125, 100, 135, 125, 115],
-            color: () => '#22c55e',
-            strokeWidth: 3,
-          },
-          {
-            data: [120, 120, 120, 120, 120, 120, 120],
-            color: () => '#f97316',
-            strokeWidth: 2,
-            withDots: false,
-          },
-        ],
-      },
-      legend: [
-        { color: '#22c55e', label: 'Actual Throughput', dashed: false },
-        { color: '#f97316', label: 'Target Throughput', dashed: true },
-      ],
-    },
-    {
-      title: 'Motor Load (Amps)',
-      data: {
-        labels: ['12:00AM', '1:00 AM', '2:00 AM', '3:00 AM', '4:00 AM', '5:00 AM', 'Current'],
-        datasets: [
-          {
-            data: [2.5, 3.2, 2.8, 3.5, 3.0, 2.7, 3.1],
-            color: () => '#fad512',
-            strokeWidth: 3,
-          },
-        ],
-      },
-      legend: [
-        { color: '#fad512', label: 'Chain Motor Amps', dashed: false },
-      ],
-    },
-    {
-      title: 'Temperature & Humidity',
-      data: {
-        labels: ['12:00AM', '1:00 AM', '2:00 AM', '3:00 AM', '4:00 AM', '5:00 AM', 'Current'],
-        datasets: [
-          {
-            data: [72, 74, 76, 75, 78, 77, 75],
-            color: () => '#ef4444',
-            strokeWidth: 3,
-          },
-          {
-            data: [55, 57, 56, 58, 57, 59, 57],
-            color: () => '#3b82f6',
-            strokeWidth: 3,
-          },
-        ],
-      },
-      legend: [
-        { color: '#ef4444', label: 'Temperature (°F)', dashed: false },
-        { color: '#3b82f6', label: 'Humidity (%)', dashed: false },
-      ],
-    },
-  ];
-
-  const handleChartScroll = (event: any) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const index = Math.round(offsetX / (screenWidth - 32));
-    setCurrentChartIndex(index);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
   };
 
-  const scrollToChart = (index: number) => {
-    scrollViewRef.current?.scrollTo({
-      x: index * (screenWidth - 32),
-      animated: true,
-    });
-    setCurrentChartIndex(index);
+  // Computed stats
+  const currentBuPerHr = chartData.length > 0 ? chartData[chartData.length - 1].bushelsPerHour : 0;
+  const avgBuPerHr = chartData.length > 0
+    ? Math.round(chartData.reduce((s, d) => s + d.bushelsPerHour, 0) / chartData.length)
+    : 0;
+  const uptimePct = chartData.length > 0
+    ? Math.round((chartData.filter(d => d.isRunning).length / chartData.length) * 100)
+    : 0;
+  const activeFaults = faults.filter(f => !f.cleared_at).length;
+  const throughputPct = Math.min(Math.round((avgBuPerHr / 15000) * 100), 100);
+
+  // Build chart data for react-native-chart-kit
+  // Subsample to max 30 points for readability
+  const MAX_CHART_POINTS = 30;
+  const sampledChartData = chartData.length > MAX_CHART_POINTS
+    ? sampleLabels(chartData, MAX_CHART_POINTS)
+    : chartData;
+
+  const hasData = sampledChartData.length > 1;
+  const chartLabels = hasData
+    ? sampledChartData.map((d, i) =>
+        i % Math.ceil(sampledChartData.length / 5) === 0
+          ? formatTimestamp(d.timestamp, selectedRange.hours)
+          : ''
+      )
+    : ['', ''];
+
+  const ampsChartData = {
+    labels: chartLabels,
+    datasets: [
+      {
+        data: hasData ? sampledChartData.map(d => d.chainAmps) : [0, 0],
+        color: () => '#f97316',
+        strokeWidth: 2,
+      },
+      {
+        data: hasData ? sampledChartData.map(d => d.innerAmps) : [0, 0],
+        color: () => '#3b82f6',
+        strokeWidth: 2,
+      },
+      {
+        data: hasData ? sampledChartData.map(d => d.outerAmps) : [0, 0],
+        color: () => '#22c55e',
+        strokeWidth: 2,
+      },
+    ],
+  };
+
+  const throughputChartData = {
+    labels: chartLabels,
+    datasets: [
+      {
+        data: hasData ? sampledChartData.map(d => d.chainRpm) : [0, 0],
+        color: () => '#a855f7',
+        strokeWidth: 2,
+      },
+    ],
+  };
+
+  const chartConfig = {
+    backgroundColor: '#242c38',
+    backgroundGradientFrom: '#242c38',
+    backgroundGradientTo: '#242c38',
+    decimalPlaces: 1,
+    color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(148, 163, 184, ${opacity})`,
+    propsForDots: { r: '0' },
+    propsForBackgroundLines: {
+      strokeDasharray: '',
+      stroke: '#374151',
+      strokeWidth: 1,
+    },
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Image
-            source={require('../assets/raptor_icon_yellow.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.headerTitle}>Analytics</Text>
-        </View>
-
-        {/* KPI Grid */}
-        <View style={styles.kpiGrid}>
-          {/* Row 1 */}
-          <View style={styles.kpiCard}>
-            <Text style={styles.kpiValue}>24</Text>
-            <Text style={styles.kpiLabel} numberOfLines={1}>Total Sweeps</Text>
-          </View>
-          <View style={styles.kpiCard}>
-            <Text style={[styles.kpiValue, { color: '#22c55e' }]}>16</Text>
-            <Text style={styles.kpiLabel} numberOfLines={1}>Running</Text>
-          </View>
-          <View style={styles.kpiCard}>
-            <Text style={[styles.kpiValue, { color: '#3b82f6' }]}>1590</Text>
-            <Text style={styles.kpiLabel} numberOfLines={1}>Total bu/hr</Text>
-          </View>
-          <View style={styles.kpiCard}>
-            <Text style={[styles.kpiValue, { color: '#f97316' }]}>66.2</Text>
-            <Text style={styles.kpiLabel} numberOfLines={1}>Avg bu/hr</Text>
-          </View>
-
-          {/* Row 2 */}
-          <View style={styles.kpiCard}>
-            <Text style={[styles.kpiValue, { color: '#fb7185' }]}>75.4°</Text>
-            <Text style={styles.kpiLabel} numberOfLines={1}>Avg Temp</Text>
-          </View>
-          <View style={styles.kpiCard}>
-            <Text style={[styles.kpiValue, { color: '#22c55e' }]}>57.0%</Text>
-            <Text style={styles.kpiLabel} numberOfLines={1}>Avg Humidity</Text>
-          </View>
-          <View style={styles.kpiCard}>
-            <Text style={[styles.kpiValue, { color: '#eab308' }]}>2</Text>
-            <Text style={styles.kpiLabel} numberOfLines={1}>Alerts</Text>
-          </View>
-          <View style={styles.kpiCard}>
-            <Text style={[styles.kpiValue, { color: '#a855f7' }]}>66.7%</Text>
-            <Text style={styles.kpiLabel} numberOfLines={1}>Efficiency</Text>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#fad512" />}
+    >
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Image source={require('../assets/raptor_icon_yellow.png')} style={styles.logo} resizeMode="contain" />
+          <View>
+            <Text style={styles.headerTitle}>Analytics</Text>
+            <Text style={styles.headerSubtitle}>Performance metrics & trends</Text>
           </View>
         </View>
+        <TouchableOpacity onPress={refresh} disabled={isLoading} style={styles.refreshButton}>
+          {isLoading
+            ? <ActivityIndicator size="small" color="#94a3b8" />
+            : <RefreshCw size={18} color="#94a3b8" />
+          }
+        </TouchableOpacity>
+      </View>
 
-        {/* Dropdown Buttons */}
-        <View style={styles.dropdownRow}>
-          <TouchableOpacity style={styles.dropdownButton}>
-            <Text style={styles.dropdownButtonText}>{viewMode}</Text>
-            <ChevronDown size={16} color="#ffffff" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.dropdownButton}>
-            <Text style={styles.dropdownButtonText}>{timeRange}</Text>
-            <ChevronDown size={16} color="#ffffff" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Select Bin Section */}
-        <View style={styles.selectBinSection}>
-          <Text style={styles.selectBinTitle}>Select Bin</Text>
-
+      {/* Select Bin */}
+      <Card style={styles.sweepSelectorCard}>
+        <CardHeader>
+          <CardTitle>
+            <Text style={styles.sweepSelectorTitle}>Select Bin</Text>
+          </CardTitle>
+        </CardHeader>
+        <CardContent style={styles.sweepSelector}>
           {/* Search Bar */}
           <View style={styles.searchRow}>
             <View style={styles.searchInput}>
@@ -222,28 +190,38 @@ export default function AnalyticsPage() {
             </View>
             <TouchableOpacity
               style={styles.clearButton}
-              onPress={() => {
-                setSelectedSweep(null);
-                setSearchQuery('');
-              }}
+              onPress={() => setSearchQuery('')}
             >
               <Text style={styles.clearButtonText}>Clear</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Sweep Grid */}
-          <View style={styles.sweepGrid}>
-            {sweeps.map((sweep) => (
+          <View style={styles.sweepButtons}>
+            {mockSweepData.slice(0, 4).map((sweep) => (
               <TouchableOpacity
                 key={sweep.id}
-                style={[
-                  styles.sweepCard,
-                  selectedSweep === sweep.id && styles.sweepCardSelected,
-                ]}
                 onPress={() => setSelectedSweep(sweep.id)}
+                style={[
+                  styles.sweepButton,
+                  selectedSweep === sweep.id && styles.sweepButtonActive,
+                ]}
               >
-                <Text style={styles.sweepCardTitle}>Sweep #{sweep.id}</Text>
-                <Text style={styles.sweepCardZone}>Zone {sweep.zone}</Text>
+                <Text
+                  style={[
+                    styles.sweepButtonText,
+                    selectedSweep === sweep.id && styles.sweepButtonTextActive,
+                  ]}
+                >
+                  {sweep.id}
+                </Text>
+                <Text
+                  style={[
+                    styles.sweepButtonZone,
+                    selectedSweep === sweep.id && styles.sweepButtonZoneActive,
+                  ]}
+                >
+                  {sweep.zone}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -252,574 +230,329 @@ export default function AnalyticsPage() {
           <View style={styles.sweepGridFooter}>
             <ChevronDown size={20} color="#94a3b8" />
           </View>
-        </View>
+        </CardContent>
+      </Card>
 
-        {/* Chart Carousel - Only shown when sweep is selected */}
-        {selectedSweep && (
-          <View style={styles.chartSection}>
-            <View style={styles.chartCarouselContainer}>
-              {/* Navigation arrows */}
-              {currentChartIndex > 0 && (
-                <TouchableOpacity
-                  style={styles.chartNavLeft}
-                  onPress={() => scrollToChart(currentChartIndex - 1)}
-                >
-                  <ChevronLeft size={24} color="#ffffff" />
-                </TouchableOpacity>
-              )}
-              {currentChartIndex < charts.length - 1 && (
-                <TouchableOpacity
-                  style={styles.chartNavRight}
-                  onPress={() => scrollToChart(currentChartIndex + 1)}
-                >
-                  <ChevronRight size={24} color="#ffffff" />
-                </TouchableOpacity>
-              )}
-
-              {/* Scrollable charts */}
-              <ScrollView
-                ref={scrollViewRef}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onScroll={handleChartScroll}
-                scrollEventThrottle={16}
-                snapToInterval={screenWidth - 32}
-                decelerationRate="fast"
-              >
-                {charts.map((chart, index) => (
-                  <View key={index} style={styles.chartSlide}>
-                    <Text style={styles.chartTitle}>{chart.title}</Text>
-
-                    <View style={styles.chartWrapper}>
-                      <LineChart
-                        data={chart.data}
-                        width={screenWidth - 80}
-                        height={220}
-                        chartConfig={{
-                          backgroundColor: '#242c38',
-                          backgroundGradientFrom: '#242c38',
-                          backgroundGradientTo: '#242c38',
-                          decimalPlaces: 0,
-                          color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                          labelColor: (opacity = 1) => `rgba(148, 163, 184, ${opacity})`,
-                          propsForDots: {
-                            r: '0',
-                          },
-                          propsForBackgroundLines: {
-                            strokeDasharray: '',
-                            stroke: '#4b5663',
-                            strokeWidth: 1,
-                          },
-                        }}
-                        bezier
-                        style={styles.chart}
-                        withVerticalLines={false}
-                        withHorizontalLines={true}
-                        withDots={false}
-                      />
-
-                      {/* Legend */}
-                      <View style={styles.chartLegend}>
-                        {chart.legend.map((item, legendIndex) => (
-                          <View key={legendIndex} style={styles.legendItem}>
-                            {item.dashed ? (
-                              <View
-                                style={[
-                                  styles.legendLine,
-                                  styles.legendLineDashed,
-                                  { borderColor: item.color },
-                                ]}
-                              />
-                            ) : (
-                              <View
-                                style={[styles.legendLine, { backgroundColor: item.color }]}
-                              />
-                            )}
-                            <Text style={styles.legendText}>{item.label}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  </View>
-                ))}
-              </ScrollView>
-
-              {/* Pagination dots */}
-              <View style={styles.chartPagination}>
-                {charts.map((_, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => scrollToChart(index)}
-                    style={[
-                      styles.paginationDot,
-                      currentChartIndex === index && styles.paginationDotActive,
-                    ]}
-                  />
-                ))}
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Performance Alerts */}
-        <View style={styles.section}>
+      {/* Time Range Selector */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.timeRangeScroll} contentContainerStyle={styles.timeRangeContent}>
+        {TIME_RANGES.map((range) => (
           <TouchableOpacity
-            style={styles.sectionHeader}
-            onPress={() => setPerformanceAlertsOpen(!performanceAlertsOpen)}
+            key={range.label}
+            onPress={() => setSelectedRange(range)}
+            style={[styles.timeRangePill, selectedRange.label === range.label && styles.timeRangePillActive]}
           >
-            <View style={styles.sectionHeaderLeft}>
-              <AlertTriangle size={20} color="#fad512" />
-              <Text style={styles.sectionTitle}>Performance Alerts</Text>
-            </View>
-            {performanceAlertsOpen ? (
-              <ChevronUp size={20} color="#ffffff" />
-            ) : (
-              <ChevronDown size={20} color="#ffffff" />
-            )}
+            <Text style={[styles.timeRangePillText, selectedRange.label === range.label && styles.timeRangePillTextActive]}>
+              {range.label}
+            </Text>
           </TouchableOpacity>
-
-          {performanceAlertsOpen && (
-            <View style={styles.sectionContent}>
-              {/* High Temperature Alert */}
-              <View style={[styles.alertCard, styles.alertCardYellow]}>
-                <View style={styles.alertCardContent}>
-                  <View>
-                    <Text style={styles.alertCardTitle}>High Temperature</Text>
-                    <Text style={styles.alertCardSubtitle}>3 sweeps above 80°</Text>
-                  </View>
-                  <View style={styles.alertBadge}>
-                    <Text style={styles.alertBadgeText}>3</Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Low Efficency Alert */}
-              <View style={[styles.alertCard, styles.alertCardRed]}>
-                <View style={styles.alertCardContent}>
-                  <View>
-                    <Text style={styles.alertCardTitle}>Low Efficency</Text>
-                    <Text style={styles.alertCardSubtitle}>3 sweeps below target</Text>
-                  </View>
-                  <View style={styles.alertBadge}>
-                    <Text style={styles.alertBadgeText}>3</Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Maintenance Due Alert */}
-              <View style={[styles.alertCard, styles.alertCardBlue]}>
-                <View style={styles.alertCardContent}>
-                  <View>
-                    <Text style={styles.alertCardTitle}>Maintenance Due</Text>
-                    <Text style={styles.alertCardSubtitle}>3 sweeps scheduled</Text>
-                  </View>
-                  <View style={styles.alertBadge}>
-                    <Text style={styles.alertBadgeText}>3</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Top Performers */}
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.sectionHeader}
-            onPress={() => setTopPerformersOpen(!topPerformersOpen)}
-          >
-            <View style={styles.sectionHeaderLeft}>
-              <Trophy size={20} color="#22c55e" />
-              <Text style={styles.sectionTitle}>Top Performers</Text>
-            </View>
-            {topPerformersOpen ? (
-              <ChevronUp size={20} color="#ffffff" />
-            ) : (
-              <ChevronDown size={20} color="#ffffff" />
-            )}
-          </TouchableOpacity>
-
-          {topPerformersOpen && (
-            <View style={styles.sectionContent}>
-              {topPerformers.map((performer) => (
-                <View key={performer.rank} style={styles.performerCard}>
-                  <View style={styles.performerRank}>
-                    <Text style={styles.performerRankText}>{performer.rank}</Text>
-                  </View>
-                  <View style={styles.performerInfo}>
-                    <Text style={styles.performerSweep}>Sweep #{performer.id}</Text>
-                    <Text style={styles.performerZone}>Zone {performer.zone}</Text>
-                  </View>
-                  <Text style={styles.performerValue}>{performer.buPerHr} bu/hr</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
+        ))}
       </ScrollView>
-    </View>
+
+      {/* Error Banner */}
+      {error && (
+        <View style={styles.errorBanner}>
+          <AlertTriangle size={16} color="#f87171" />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
+      {/* Stats KPI Grid */}
+      <View style={styles.statsCard}>
+        <View style={styles.statsGrid}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{summary.totalRecords.toLocaleString()}</Text>
+            <Text style={styles.statLabel}>Data Points</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: '#22c55e' }]}>{uptimePct}%</Text>
+            <Text style={styles.statLabel}>Uptime</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: '#3b82f6' }]}>{currentBuPerHr.toLocaleString()}</Text>
+            <Text style={styles.statLabel}>Current bu/hr</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: '#f97316' }]}>{avgBuPerHr.toLocaleString()}</Text>
+            <Text style={styles.statLabel}>Avg bu/hr</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: '#fad512' }]}>{activeFaults}</Text>
+            <Text style={styles.statLabel}>Active Faults</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: '#a855f7' }]}>{summary.totalRunTimeMinutes}</Text>
+            <Text style={styles.statLabel}>Run Time (min)</Text>
+          </View>
+        </View>
+
+        {/* Direction Bar */}
+        <View style={styles.directionSection}>
+          <Text style={styles.directionLabel}>Direction</Text>
+          <View style={styles.directionBar}>
+            {summary.forwardPercent > 0 && (
+              <View style={[styles.directionFwd, { flex: summary.forwardPercent }]} />
+            )}
+            {summary.reversePercent > 0 && (
+              <View style={[styles.directionRev, { flex: summary.reversePercent }]} />
+            )}
+            {summary.forwardPercent === 0 && summary.reversePercent === 0 && (
+              <View style={[styles.directionEmpty, { flex: 1 }]} />
+            )}
+          </View>
+          <View style={styles.directionLabels}>
+            <Text style={styles.directionFwdText}>FWD {summary.forwardPercent}%</Text>
+            <Text style={styles.directionRevText}>REV {summary.reversePercent}%</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Motor Current Chart */}
+      <View style={styles.chartCard}>
+        <View style={styles.chartHeader}>
+          <Zap size={18} color="#f97316" />
+          <Text style={styles.chartTitle}>Motor Current (Amps)</Text>
+        </View>
+        <View style={styles.chartLegend}>
+          <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#f97316' }]} /><Text style={styles.legendText}>Chain</Text></View>
+          <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#3b82f6' }]} /><Text style={styles.legendText}>Inner</Text></View>
+          <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#22c55e' }]} /><Text style={styles.legendText}>Outer</Text></View>
+        </View>
+        {isLoading && !hasData ? (
+          <View style={styles.chartPlaceholder}>
+            <ActivityIndicator color="#fad512" />
+            <Text style={styles.loadingText}>Loading data...</Text>
+          </View>
+        ) : (
+          <LineChart
+            data={ampsChartData}
+            width={screenWidth - 32}
+            height={220}
+            chartConfig={chartConfig}
+            bezier
+            withDots={false}
+            withVerticalLines={false}
+            style={styles.chart}
+            fromZero
+          />
+        )}
+      </View>
+
+      {/* Throughput & RPM Chart */}
+      <View style={styles.chartCard}>
+        <View style={styles.chartHeader}>
+          <Activity size={18} color="#a855f7" />
+          <Text style={styles.chartTitle}>Chain RPM</Text>
+        </View>
+        <View style={styles.chartLegend}>
+          <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#a855f7' }]} /><Text style={styles.legendText}>Chain RPM</Text></View>
+        </View>
+        {isLoading && !hasData ? (
+          <View style={styles.chartPlaceholder}>
+            <ActivityIndicator color="#fad512" />
+            <Text style={styles.loadingText}>Loading data...</Text>
+          </View>
+        ) : (
+          <LineChart
+            data={throughputChartData}
+            width={screenWidth - 32}
+            height={220}
+            chartConfig={{ ...chartConfig, color: () => '#a855f7' }}
+            bezier
+            withDots={false}
+            withVerticalLines={false}
+            style={styles.chart}
+            fromZero
+          />
+        )}
+      </View>
+
+      {/* Motor Statistics */}
+      <View style={styles.sectionCard}>
+        <View style={styles.sectionHeader}>
+          <Zap size={18} color="#f97316" />
+          <Text style={styles.sectionTitle}>Motor Statistics</Text>
+        </View>
+        <View style={styles.motorRow}>
+          <View style={[styles.motorCard, styles.motorCardOrange]}>
+            <Text style={styles.motorName}>Chain Motor</Text>
+            <Text style={styles.motorStat}>Avg: {summary.avgChainAmps.toFixed(1)}A</Text>
+            <Text style={styles.motorStat}>RPM: {summary.avgChainRpm.toFixed(0)}</Text>
+            <Text style={styles.motorMax}>Max: {summary.maxChainAmps.toFixed(1)}A</Text>
+          </View>
+          <View style={[styles.motorCard, styles.motorCardBlue]}>
+            <Text style={[styles.motorName, { color: '#3b82f6' }]}>Inner Wheel</Text>
+            <Text style={styles.motorStat}>Avg: {summary.avgInnerAmps.toFixed(1)}A</Text>
+          </View>
+          <View style={[styles.motorCard, styles.motorCardGreen]}>
+            <Text style={[styles.motorName, { color: '#22c55e' }]}>Outer Wheel</Text>
+            <Text style={styles.motorStat}>Avg: {summary.avgOuterAmps.toFixed(1)}A</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* System Health */}
+      <View style={styles.sectionCard}>
+        <View style={styles.sectionHeader}>
+          <Activity size={18} color="#a855f7" />
+          <Text style={styles.sectionTitle}>System Health</Text>
+        </View>
+        <View style={styles.healthRow}>
+          <Text style={styles.healthLabel}>System Uptime</Text>
+          <Text style={styles.healthValue}>{uptimePct}%</Text>
+        </View>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${uptimePct}%`, backgroundColor: '#22c55e' }]} />
+        </View>
+        <View style={[styles.healthRow, { marginTop: 16 }]}>
+          <Text style={styles.healthLabel}>Throughput</Text>
+          <Text style={styles.healthValue}>{throughputPct}%</Text>
+        </View>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${throughputPct}%`, backgroundColor: '#fad512' }]} />
+        </View>
+        <View style={[styles.healthRow, { marginTop: 16 }]}>
+          <Text style={styles.healthLabel}>Data Status</Text>
+          <Text style={styles.healthValue}>{isLoading ? 'Loading...' : 'Ready'}</Text>
+        </View>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: isLoading ? '50%' : '100%', backgroundColor: isLoading ? '#3b82f6' : '#22c55e' }]} />
+        </View>
+      </View>
+
+      {/* Recent Faults */}
+      <View style={[styles.sectionCard, { marginBottom: 24 }]}>
+        <View style={styles.sectionHeader}>
+          <AlertTriangle size={18} color="#fad512" />
+          <Text style={styles.sectionTitle}>Recent Faults</Text>
+        </View>
+        {faults.length === 0 ? (
+          <Text style={styles.emptyText}>No faults recorded</Text>
+        ) : (
+          faults.slice(0, 5).map((fault) => (
+            <View
+              key={fault.id}
+              style={[styles.faultRow, fault.cleared_at ? styles.faultCleared : styles.faultActive]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.faultMotor, fault.cleared_at ? { color: '#94a3b8' } : { color: '#f87171' }]}>
+                  {fault.motor} — {fault.fault_code}
+                </Text>
+                <Text style={styles.faultTime}>{new Date(fault.ts).toLocaleString()}</Text>
+              </View>
+              <View style={[styles.faultBadge, fault.cleared_at ? styles.faultBadgeCleared : styles.faultBadgeActive]}>
+                <Text style={styles.faultBadgeText}>{fault.cleared_at ? 'Cleared' : 'Active'}</Text>
+              </View>
+            </View>
+          ))
+        )}
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    gap: 16,
-  },
+  container: { flex: 1 },
+  content: { padding: 16, gap: 16 },
 
   // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-  },
-  logo: {
-    width: 60,
-    height: 60,
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  logo: { width: 48, height: 48 },
+  headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#ffffff' },
+  headerSubtitle: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
+  refreshButton: { padding: 8, backgroundColor: '#242c38', borderRadius: 8, borderWidth: 1, borderColor: '#475569' },
 
-  // KPI Grid
-  kpiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  kpiCard: {
-    flex: 1,
-    minWidth: '22%',
-    height: 75,
-    backgroundColor: '#242c38',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  kpiValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  kpiLabel: {
-    fontSize: 9,
-    color: '#94a3b8',
-    textAlign: 'center',
-    numberOfLines: 1,
-  },
+  // Time Range
+  timeRangeScroll: { marginBottom: 4 },
+  timeRangeContent: { gap: 8, paddingRight: 8 },
+  timeRangePill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#242c38', borderWidth: 1, borderColor: '#475569' },
+  timeRangePillActive: { backgroundColor: '#fad512', borderColor: '#fad512' },
+  timeRangePillText: { color: '#94a3b8', fontSize: 13, fontWeight: '600' },
+  timeRangePillTextActive: { color: '#1a1d29' },
 
-  // Dropdown Buttons
-  dropdownRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  dropdownButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#242c38',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  dropdownButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
+  // Error
+  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(239,68,68,0.15)', borderWidth: 1, borderColor: '#ef4444', borderRadius: 8, padding: 12 },
+  errorText: { color: '#f87171', fontSize: 13, flex: 1 },
 
-  // Select Bin Section
-  selectBinSection: {
-    backgroundColor: '#242c38',
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
-  },
-  selectBinTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 4,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  searchInput: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#4b5663',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  searchTextInput: {
-    flex: 1,
-    color: '#ffffff',
-    fontSize: 14,
-  },
-  clearButton: {
-    backgroundColor: '#4b5663',
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    justifyContent: 'center',
-  },
-  clearButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  sweepGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  sweepCard: {
-    width: '23%',
-    backgroundColor: '#4b5663',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  sweepCardSelected: {
-    borderColor: '#22c55e',
-    backgroundColor: '#1e3a2a',
-  },
-  sweepCardTitle: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  sweepCardZone: {
-    color: '#94a3b8',
-    fontSize: 11,
-  },
-  sweepGridFooter: {
-    alignItems: 'center',
-    paddingTop: 4,
-  },
+  // Stats
+  statsCard: { backgroundColor: '#242c38', borderRadius: 12, padding: 16, gap: 16 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  statItem: { flex: 1, minWidth: '28%', alignItems: 'center' },
+  statValue: { fontSize: 22, fontWeight: 'bold', color: '#ffffff' },
+  statLabel: { fontSize: 10, color: '#94a3b8', marginTop: 2, textAlign: 'center' },
 
-  // Chart Section
-  chartSection: {
-    backgroundColor: '#242c38',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  chartCarouselContainer: {
-    position: 'relative',
-  },
-  chartSlide: {
-    width: screenWidth - 32,
-    padding: 16,
-    gap: 12,
-  },
-  chartTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    textAlign: 'center',
-  },
-  chartWrapper: {
-    alignItems: 'center',
-    gap: 12,
-  },
-  chart: {
-    borderRadius: 8,
-  },
-  chartNavLeft: {
-    position: 'absolute',
-    left: 8,
-    top: '45%',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderRadius: 20,
-    padding: 4,
-    zIndex: 10,
-  },
-  chartNavRight: {
-    position: 'absolute',
-    right: 8,
-    top: '45%',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderRadius: 20,
-    padding: 4,
-    zIndex: 10,
-  },
-  chartPagination: {
-    flexDirection: 'row',
-    gap: 6,
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  paginationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#4b5663',
-  },
-  paginationDotActive: {
-    backgroundColor: '#ffffff',
-  },
-  chartLegend: {
-    flexDirection: 'row',
-    gap: 20,
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  legendLine: {
-    width: 24,
-    height: 3,
-    borderRadius: 2,
-  },
-  legendLineDashed: {
-    borderStyle: 'dashed',
-    borderWidth: 1.5,
-    backgroundColor: 'transparent',
-    height: 0,
-  },
-  legendText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-  },
+  // Direction
+  directionSection: { gap: 6 },
+  directionLabel: { fontSize: 11, color: '#94a3b8', textAlign: 'center' },
+  directionBar: { flexDirection: 'row', height: 8, borderRadius: 4, overflow: 'hidden', backgroundColor: '#475569' },
+  directionFwd: { backgroundColor: '#06b6d4' },
+  directionRev: { backgroundColor: '#f59e0b' },
+  directionEmpty: { backgroundColor: '#475569' },
+  directionLabels: { flexDirection: 'row', justifyContent: 'space-between' },
+  directionFwdText: { fontSize: 11, color: '#06b6d4' },
+  directionRevText: { fontSize: 11, color: '#f59e0b' },
 
-  // Collapsible Sections
-  section: {
-    backgroundColor: '#242c38',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-  },
-  sectionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sectionTitle: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  sectionContent: {
-    padding: 16,
-    paddingTop: 0,
-    gap: 12,
-  },
+  // Charts
+  chartCard: { backgroundColor: '#242c38', borderRadius: 12, padding: 16, overflow: 'hidden' },
+  chartHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  chartTitle: { fontSize: 16, fontWeight: 'bold', color: '#ffffff' },
+  chartLegend: { flexDirection: 'row', gap: 16, marginBottom: 8 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 10, height: 10, borderRadius: 5 },
+  legendText: { color: '#cbd5e1', fontSize: 12 },
+  chart: { borderRadius: 8, marginLeft: -16 },
+  chartPlaceholder: { height: 220, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  loadingText: { color: '#94a3b8', fontSize: 13 },
 
-  // Alert Cards
-  alertCard: {
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 2,
-  },
-  alertCardYellow: {
-    backgroundColor: 'rgba(234, 179, 8, 0.15)',
-    borderColor: '#eab308',
-  },
-  alertCardRed: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderColor: '#ef4444',
-  },
-  alertCardBlue: {
-    backgroundColor: 'rgba(59, 130, 246, 0.15)',
-    borderColor: '#3b82f6',
-  },
-  alertCardContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  alertCardTitle: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  alertCardSubtitle: {
-    color: '#cbd5e1',
-    fontSize: 13,
-  },
-  alertBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(250, 213, 18, 0.9)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  alertBadgeText: {
-    color: '#0b101c',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  // Section cards (motor stats, system health, faults)
+  sectionCard: { backgroundColor: '#242c38', borderRadius: 12, padding: 16, gap: 12 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#ffffff' },
 
-  // Top Performers
-  performerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: '#22c55e',
-  },
-  performerRank: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#22c55e',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  performerRankText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  performerInfo: {
-    flex: 1,
-  },
-  performerSweep: {
-    color: '#22c55e',
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  performerZone: {
-    color: '#94a3b8',
-    fontSize: 12,
-  },
-  performerValue: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
+  // Motor stats
+  motorRow: { flexDirection: 'row', gap: 8 },
+  motorCard: { flex: 1, borderRadius: 10, padding: 12, borderWidth: 1, gap: 4 },
+  motorCardOrange: { backgroundColor: 'rgba(249,115,22,0.1)', borderColor: '#f97316' },
+  motorCardBlue: { backgroundColor: 'rgba(59,130,246,0.1)', borderColor: '#3b82f6' },
+  motorCardGreen: { backgroundColor: 'rgba(34,197,94,0.1)', borderColor: '#22c55e' },
+  motorName: { fontSize: 12, fontWeight: '700', color: '#f97316' },
+  motorStat: { fontSize: 11, color: '#94a3b8' },
+  motorMax: { fontSize: 11, color: '#ffffff', fontWeight: '600' },
+
+  // System health
+  healthRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  healthLabel: { color: '#cbd5e1', fontSize: 14 },
+  healthValue: { color: '#ffffff', fontFamily: 'monospace', fontSize: 14 },
+  progressTrack: { width: '100%', height: 6, backgroundColor: '#475569', borderRadius: 3, overflow: 'hidden', marginTop: 6 },
+  progressFill: { height: '100%', borderRadius: 3 },
+
+  // Faults
+  faultRow: { padding: 12, borderRadius: 10, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  faultActive: { backgroundColor: 'rgba(239,68,68,0.1)', borderColor: '#ef4444' },
+  faultCleared: { backgroundColor: 'rgba(71,85,105,0.3)', borderColor: '#475569' },
+  faultMotor: { fontSize: 14, fontWeight: '600' },
+  faultTime: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
+  faultBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
+  faultBadgeActive: { backgroundColor: '#dc2626' },
+  faultBadgeCleared: { backgroundColor: '#475569' },
+  faultBadgeText: { color: '#ffffff', fontSize: 11, fontWeight: '600' },
+  emptyText: { color: '#94a3b8', textAlign: 'center', paddingVertical: 16, fontSize: 13 },
+
+  // Sweep Selector
+  sweepSelectorCard: { backgroundColor: '#242c38', borderRadius: 12 },
+  sweepSelectorTitle: { fontSize: 16, fontWeight: 'bold', color: '#ffffff' },
+  sweepSelector: { padding: 12, gap: 10 },
+  searchRow: { flexDirection: 'row', gap: 8 },
+  searchInput: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#4b5663', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, gap: 6 },
+  searchTextInput: { flex: 1, color: '#ffffff', fontSize: 13 },
+  clearButton: { backgroundColor: '#4b5663', borderRadius: 6, paddingHorizontal: 14, paddingVertical: 6, justifyContent: 'center' },
+  clearButtonText: { color: '#ffffff', fontSize: 13, fontWeight: '500' },
+  sweepButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  sweepGridFooter: { alignItems: 'center', paddingTop: 2 },
+  sweepButton: { backgroundColor: '#4b5663', borderWidth: 2, borderColor: '#4b5663', borderRadius: 6, paddingVertical: 8, paddingHorizontal: 12, flex: 1, minWidth: '22%', alignItems: 'center' },
+  sweepButtonActive: { backgroundColor: '#4b5663', borderColor: '#22d3ee' },
+  sweepButtonText: { color: '#ffffff', fontSize: 13, fontWeight: '600' },
+  sweepButtonTextActive: { color: '#ffffff' },
+  sweepButtonZone: { color: '#94a3b8', fontSize: 11, marginTop: 2 },
+  sweepButtonZoneActive: { color: '#94a3b8' },
 });

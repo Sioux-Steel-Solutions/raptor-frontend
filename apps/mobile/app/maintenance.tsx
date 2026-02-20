@@ -120,7 +120,7 @@ export default function MaintenancePage() {
                       selectedSweep === sweep.id && styles.sweepButtonTextActive,
                     ]}
                   >
-                    {sweep.id.replace('SA-', '#')}
+                    {sweep.id}
                   </Text>
                   <Text
                     style={[
@@ -414,56 +414,56 @@ const styles = StyleSheet.create({
     color: '#22c55e',
   },
   sweepSelector: {
-    padding: 16,
-    gap: 12,
+    padding: 12,
+    gap: 10,
   },
   searchRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   searchInput: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#4b5663',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 6,
   },
   searchTextInput: {
     flex: 1,
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
   },
   clearButton: {
     backgroundColor: '#4b5663',
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     justifyContent: 'center',
   },
   clearButtonText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
   },
   sweepButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 8,
   },
   sweepGridFooter: {
     alignItems: 'center',
-    paddingTop: 4,
+    paddingTop: 2,
   },
   sweepButton: {
     backgroundColor: '#4b5663',
     borderWidth: 2,
     borderColor: '#4b5663',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     flex: 1,
     minWidth: '22%',
     alignItems: 'center',
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
   },
   sweepButtonText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   sweepButtonTextActive: {
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
   },
   sweepButtonZone: {
     color: '#94a3b8',
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 2,
   },
   sweepButtonZoneActive: {

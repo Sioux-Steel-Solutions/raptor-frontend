@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Card, CardContent } from '../../components/ui/Card';
 import { ChevronLeft, ImagePlus, Trash2, User, ChevronDown } from 'lucide-react-native';
-import { RaptorIcon } from '../../components/RaptorIcon';
 import { useTheme } from '../../contexts/ThemeContext';
 
 export default function ProfilePage() {
@@ -18,7 +17,11 @@ export default function ProfilePage() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <RaptorIcon size={48} />
+            <Image
+              source={require('../../assets/raptor_icon_yellow.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
           </View>
         </View>
@@ -131,14 +134,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  logo: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#fad512',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  logo: { width: 48, height: 48 },
   logoText: {
     fontSize: 24,
     fontWeight: 'bold',

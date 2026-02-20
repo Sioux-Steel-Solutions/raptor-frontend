@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
-import { RaptorIcon } from '../../components/RaptorIcon';
 import { useTheme } from '../../contexts/ThemeContext';
 
 export default function IntegrationPage() {
@@ -14,7 +13,11 @@ export default function IntegrationPage() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <RaptorIcon size={48} />
+            <Image
+              source={require('../../assets/raptor_icon_yellow.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
           </View>
         </View>
@@ -56,7 +59,7 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 16 },
   header: { marginBottom: 16 },
   logoContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logo: { width: 48, height: 48, backgroundColor: '#fad512', borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  logo: { width: 48, height: 48 },
   logoText: { fontSize: 24, fontWeight: 'bold', color: '#1a1d29' },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#ffffff' },
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 40 },

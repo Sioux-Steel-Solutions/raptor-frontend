@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Card, CardContent } from '../../components/ui/Card';
 import { ChevronLeft, Activity, Gauge, Clock, Wifi } from 'lucide-react-native';
-import { RaptorIcon } from '../../components/RaptorIcon';
 import { useTheme } from '../../contexts/ThemeContext';
 
 export default function NetworkPage() {
@@ -29,7 +28,11 @@ export default function NetworkPage() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <RaptorIcon size={48} />
+            <Image
+              source={require('../../assets/raptor_icon_yellow.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
           </View>
         </View>
@@ -191,26 +194,25 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 16, paddingBottom: 32 },
   header: { marginBottom: 16 },
   logoContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logo: { width: 48, height: 48, backgroundColor: '#fad512', borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  logoText: { fontSize: 24, fontWeight: 'bold', color: '#1a1d29' },
+  logo: { width: 48, height: 48 },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#ffffff' },
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
   backButtonText: { fontSize: 16, color: '#ffffff', fontWeight: '500' },
   statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  statCard: { flex: 1, backgroundColor: '#2d3548', borderRadius: 8, padding: 12, alignItems: 'center' },
+  statCard: { flex: 1, backgroundColor: '#242c38', borderRadius: 8, padding: 12, alignItems: 'center' },
   statValue: { fontSize: 18, fontWeight: 'bold', color: '#ffffff', marginTop: 8 },
   statLabel: { fontSize: 10, color: '#94a3b8', marginTop: 4, textAlign: 'center' },
-  card: { backgroundColor: '#2d3548', borderWidth: 0, marginBottom: 16 },
-  cardContent: { padding: 20 },
-  cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#ffffff', marginBottom: 4 },
+  card: { backgroundColor: '#242c38', borderWidth: 0, marginBottom: 16 },
+  cardContent: { padding: 16 },
+  cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#ffffff', marginBottom: 10 },
   cardSubtitle: { fontSize: 13, color: '#94a3b8', marginBottom: 16 },
-  sweepButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  sweepButton: { backgroundColor: '#475569', borderWidth: 1, borderColor: '#334155', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14, minWidth: 90 },
-  sweepButtonActive: { backgroundColor: '#22c55e', borderColor: '#22c55e' },
+  sweepButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  sweepButton: { backgroundColor: '#475569', borderWidth: 2, borderColor: '#475569', borderRadius: 6, paddingVertical: 8, paddingHorizontal: 12, minWidth: 85 },
+  sweepButtonActive: { backgroundColor: '#475569', borderColor: '#22d3ee' },
   sweepButtonText: { fontSize: 13, fontWeight: '600', color: '#ffffff', marginBottom: 2 },
-  sweepButtonTextActive: { color: '#1a1d29' },
+  sweepButtonTextActive: { color: '#ffffff' },
   sweepButtonZone: { fontSize: 11, color: '#94a3b8' },
-  sweepButtonZoneActive: { color: 'rgba(26, 29, 41, 0.7)' },
+  sweepButtonZoneActive: { color: '#94a3b8' },
   metricsRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
   metricCard: { flex: 1, backgroundColor: '#475569', borderRadius: 8, padding: 12, alignItems: 'center' },
   metricValue: { fontSize: 20, fontWeight: 'bold', color: '#ffffff', marginTop: 8 },

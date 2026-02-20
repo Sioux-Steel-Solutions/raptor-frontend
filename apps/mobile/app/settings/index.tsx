@@ -7,8 +7,6 @@ import {
   Shield,
   Bell,
   Sliders,
-  Users,
-  Plug,
   Network,
   Database,
   AlertTriangle,
@@ -56,20 +54,6 @@ export default function SettingsPage() {
       icon: Sliders,
       iconColor: '#f97316', // orange - matching web
       route: '/settings/preferences',
-    },
-    {
-      id: 'permissions',
-      label: 'Permissions',
-      icon: Users,
-      iconColor: '#22c55e', // green - matching web
-      route: '/settings/permissions',
-    },
-    {
-      id: 'integration',
-      label: 'Integration',
-      icon: Plug,
-      iconColor: '#a855f7', // purple - matching web
-      route: '/settings/integration',
     },
     {
       id: 'network',
@@ -168,7 +152,7 @@ const styles = StyleSheet.create({
   },
   menuCard: {
     marginBottom: 0,
-    backgroundColor: '#2d3548', // Exact card gray from design
+    backgroundColor: '#242c38', // Exact card gray from design
     borderWidth: 0,
   },
   menuContent: {

@@ -1,9 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Card, CardContent } from '../../components/ui/Card';
 import { ChevronLeft, Edit2, Trash2, Plus, FileText } from 'lucide-react-native';
-import { RaptorIcon } from '../../components/RaptorIcon';
 import { useTheme } from '../../contexts/ThemeContext';
 
 export default function PermissionsPage() {
@@ -21,7 +20,11 @@ export default function PermissionsPage() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <RaptorIcon size={48} />
+            <Image
+              source={require('../../assets/raptor_icon_yellow.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
           </View>
         </View>
@@ -33,31 +36,35 @@ export default function PermissionsPage() {
 
         <Card style={[styles.card, { backgroundColor: colors.card }]}>
           <CardContent style={styles.cardContent}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>User Managment</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>User Management</Text>
             <Text style={[styles.cardSubtitle, { color: colors.textSecondary }]}>Manage user roles, access levels, and system permissions</Text>
 
             <Text style={[styles.sectionTitle, { color: colors.text }]}>System Users</Text>
 
             {users.map((user, idx) => (
               <View key={idx} style={[styles.userItem, { backgroundColor: theme === 'dark' ? '#475569' : '#f3f4f6' }]}>
-                <View style={[styles.userAvatar, { backgroundColor: user.bgColor }]}>
-                  <Text style={[styles.userAvatarText, { color: colors.logo }]}>{user.initials}</Text>
+                <View style={styles.userItemTop}>
+                  <View style={[styles.userAvatar, { backgroundColor: user.bgColor }]}>
+                    <Text style={[styles.userAvatarText, { color: colors.logo }]}>{user.initials}</Text>
+                  </View>
+                  <View style={styles.userInfo}>
+                    <Text style={[styles.userName, { color: colors.text }]}>{user.name}</Text>
+                    <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{user.email}</Text>
+                  </View>
+                  <View style={styles.userActions}>
+                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme === 'dark' ? '#1a1d29' : '#ffffff' }]}>
+                      <Edit2 size={16} color={colors.text} strokeWidth={2} />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme === 'dark' ? '#1a1d29' : '#ffffff' }]}>
+                      <Trash2 size={16} color={colors.text} strokeWidth={2} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <View style={styles.userInfo}>
-                  <Text style={[styles.userName, { color: colors.text }]}>{user.name}</Text>
-                  <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{user.email}</Text>
-                </View>
-                <View style={[styles.roleBadge, { backgroundColor: user.roleColor }]}>
-                  <Text style={styles.roleBadgeText}>{user.role}</Text>
-                </View>
-                <Text style={[styles.userZones, { color: colors.textSecondary }]}>Zones: {user.zones}</Text>
-                <View style={styles.userActions}>
-                  <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme === 'dark' ? '#1a1d29' : '#ffffff' }]}>
-                    <Edit2 size={16} color={colors.text} strokeWidth={2} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme === 'dark' ? '#1a1d29' : '#ffffff' }]}>
-                    <Trash2 size={16} color={colors.text} strokeWidth={2} />
-                  </TouchableOpacity>
+                <View style={styles.userItemBottom}>
+                  <View style={[styles.roleBadge, { backgroundColor: user.roleColor }]}>
+                    <Text style={styles.roleBadgeText}>{user.role}</Text>
+                  </View>
+                  <Text style={[styles.userZones, { color: colors.textSecondary }]}>Zones: {user.zones}</Text>
                 </View>
               </View>
             ))}
@@ -95,22 +102,24 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 16, paddingBottom: 32 },
   header: { marginBottom: 16 },
   logoContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logo: { width: 48, height: 48, backgroundColor: '#fad512', borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  logo: { width: 48, height: 48 },
   logoText: { fontSize: 24, fontWeight: 'bold', color: '#1a1d29' },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#ffffff' },
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 24 },
   backButtonText: { fontSize: 16, color: '#ffffff', fontWeight: '500' },
-  card: { backgroundColor: '#2d3548', borderWidth: 0, marginBottom: 16 },
-  cardContent: { padding: 20 },
-  cardTitle: { fontSize: 20, fontWeight: 'bold', color: '#ffffff', marginBottom: 4 },
+  card: { backgroundColor: '#242c38', borderWidth: 0, marginBottom: 16 },
+  cardContent: { padding: 16 },
+  cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#ffffff', marginBottom: 4 },
   cardSubtitle: { fontSize: 14, color: '#94a3b8', marginBottom: 20 },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: '#ffffff', marginBottom: 16 },
-  userItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#475569', borderRadius: 8, padding: 12, marginBottom: 12, gap: 12 },
+  userItem: { backgroundColor: '#475569', borderRadius: 8, padding: 12, marginBottom: 12, gap: 10 },
+  userItemTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   userAvatar: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   userAvatarText: { fontSize: 14, fontWeight: 'bold', color: '#1a1d29' },
   userInfo: { flex: 1 },
   userName: { fontSize: 14, fontWeight: '600', color: '#ffffff', marginBottom: 2 },
   userEmail: { fontSize: 12, color: '#94a3b8' },
+  userItemBottom: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 52 },
   roleBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 },
   roleBadgeText: { fontSize: 11, fontWeight: '600', color: '#ffffff' },
   userZones: { fontSize: 12, color: '#cbd5e1' },
