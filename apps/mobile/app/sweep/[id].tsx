@@ -352,11 +352,11 @@ export default function SweepDetailPage() {
 
             <TouchableOpacity
               onPress={handleDirectionToggle}
-              disabled={!isConnected}
+              disabled={!isConnected || isRunning}
               style={[
                 styles.controlButton,
                 wheelDirection === 'fwd' ? styles.directionFwdButton : styles.directionRevButton,
-                !isConnected && styles.disabledButton,
+                (!isConnected || isRunning) && styles.disabledButton,
               ]}
             >
               <ArrowRightLeft size={20} color="#ffffff" />
