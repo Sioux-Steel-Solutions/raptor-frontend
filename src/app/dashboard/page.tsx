@@ -1,10 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Grid3X3, List, Map } from "lucide-react";
 import { LayoutWrapper } from "@/components/layout-wrapper";
 import { mockSweepData, type SweepData } from "@/lib/mock-data";
+import { useNetworkAwareMqtt } from "@/lib/use-network-aware-mqtt";
 
 function ListView({ sweeps }: { sweeps: SweepData[] }) {
   const getStatusColor = (status: SweepData["status"]) => {
@@ -476,8 +477,52 @@ function GridOverview({ sweeps }: { sweeps: SweepData[] }) {
 }
 
 export default function DashboardPage() {
-  const [sweeps] = useState<SweepData[]>(mockSweepData);
+  const [sweeps, setSweeps] = useState<SweepData[]>(mockSweepData);
   const [viewMode, setViewMode] = useState<"grid" | "list" | "map">("grid");
+  const [liveSweepPosition, setLiveSweepPosition] = useState<number | null>(null);
+
+  // MQTT for real-time sweep position (first sweep only)
+  const { subscribe, isConnected } = useNetworkAwareMqtt({
+    onMessage: (topic, payload) => {
+      try {
+        const data = JSON.parse(payload.toString());
+
+        // Handle sweep angle updates for first sweep only
+        if (topic === 'raptor/sweep/1/angle') {
+          if (data.detecting && typeof data.angle === 'number') {
+            const newAngle = ((data.angle % 360) + 360) % 360;
+            setLiveSweepPosition(newAngle);
+          }
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    },
+  });
+
+  // Subscribe to sweep angle topic when connected
+  useEffect(() => {
+    if (isConnected) {
+      subscribe('raptor/sweep/1/angle');
+    }
+  }, [isConnected, subscribe]);
+
+  // Update first sweep position with live data
+  useEffect(() => {
+    if (liveSweepPosition !== null) {
+      setSweeps((prev) => {
+        const updated = [...prev];
+        // Update first sweep (SA-001) with live position
+        if (updated[0]) {
+          updated[0] = {
+            ...updated[0],
+            position: Math.round(liveSweepPosition),
+          };
+        }
+        return updated;
+      });
+    }
+  }, [liveSweepPosition]);
 
   return (
     <LayoutWrapper>
