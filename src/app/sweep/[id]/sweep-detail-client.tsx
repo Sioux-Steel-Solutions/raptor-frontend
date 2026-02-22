@@ -193,8 +193,8 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
         // Handle sweep angle updates (dedicated topic for fast updates)
         if (topic === 'raptor/sweep/1/angle') {
           if (data.detecting && typeof data.angle === 'number') {
-            // Apply 200 degree offset and normalize to 0-360
-            const offsetAngle = ((data.angle + 200) % 360 + 360) % 360;
+            // Apply 130 degree offset and normalize to 0-360
+            const offsetAngle = ((data.angle + 130) % 360 + 360) % 360;
             setSweepPosition(offsetAngle);
           }
           // If not detecting, don't update (freeze at last known position)
