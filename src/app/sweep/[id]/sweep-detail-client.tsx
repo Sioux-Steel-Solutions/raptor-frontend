@@ -710,7 +710,7 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                         <div
                           className="absolute w-1 bg-raptor-yellow rounded-full transition-transform duration-100"
                           style={{
-                            height: "85px",
+                            height: "65px",
                             top: "50%",
                             left: "50%",
                             transform: `translate(-50%, -100%) rotate(${displayAngle}deg)`,
