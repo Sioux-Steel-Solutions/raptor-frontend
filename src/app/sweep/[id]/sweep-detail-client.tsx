@@ -223,7 +223,8 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
           typeof data?.wheels_running === "boolean" &&
           typeof data?.paddle_running === "boolean"
         ) {
-          setIsRunning(data.wheels_running && data.paddle_running);
+          // Running if EITHER wheel is running (stays disabled until BOTH stop)
+          setIsRunning(data.wheels_running || data.paddle_running);
         }
         // Parse wheel direction from state message
         if (data?.wheel_direction === "fwd" || data?.wheel_direction === "rev") {
