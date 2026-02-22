@@ -490,9 +490,9 @@ export default function DashboardPage() {
         // Handle sweep angle updates for first sweep only
         if (topic === 'raptor/sweep/1/angle') {
           if (data.detecting && typeof data.angle === 'number') {
-            // Flip 180 degrees: add 180 and normalize to 0-360
-            const flippedAngle = ((data.angle + 180) % 360 + 360) % 360;
-            setLiveSweepPosition(flippedAngle);
+            // Apply 200 degree offset and normalize to 0-360
+            const offsetAngle = ((data.angle + 200) % 360 + 360) % 360;
+            setLiveSweepPosition(offsetAngle);
           }
         }
       } catch (e) {
