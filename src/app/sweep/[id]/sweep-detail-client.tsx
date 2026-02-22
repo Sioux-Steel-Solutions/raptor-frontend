@@ -530,9 +530,10 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
                 {/* Direction Toggle */}
                 <Button
                   onClick={() => publishDirection(wheelDirection === "fwd" ? "rev" : "fwd")}
+                  disabled={isRunning}
                   className={`flex-1 text-lg text-white h-14 ${
                     wheelDirection === "fwd" ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"
-                  }`}
+                  } ${isRunning ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   <ArrowRightLeft className="w-5 h-5 mr-2" />
                   {wheelDirection === "fwd" ? "FWD" : "REV"}
