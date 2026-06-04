@@ -25,6 +25,7 @@ export const MQTT_TOPICS = {
   cmd: `raptor/${MQTT_CONFIG.site}/${MQTT_CONFIG.device}/cmd`,
   status: `raptor/${MQTT_CONFIG.site}/${MQTT_CONFIG.device}/status`,
   faults: `raptor/${MQTT_CONFIG.site}/${MQTT_CONFIG.device}/faults`,
+  angle: `raptor/${MQTT_CONFIG.site}/${MQTT_CONFIG.device}/angle`,
 };
 
 // Helper to check if we're in local mode (running on Pi)

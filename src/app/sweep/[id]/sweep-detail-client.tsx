@@ -31,6 +31,7 @@ const LayoutWrapper = dynamic(
   { ssr: false }
 );
 import { mockSweepData } from "@/lib/mock-data";
+import { MQTT_TOPICS } from "@/lib/mqtt-config";
 
 // Network-aware MQTT (auto-switches between local/cloud based on connectivity)
 import { useNetworkAwareMqtt } from "@/lib/use-network-aware-mqtt";
@@ -190,14 +191,11 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
       try {
         const data = JSON.parse(payload.toString());
 
-        // Handle sweep angle updates (dedicated topic for fast updates)
-        if (topic === 'raptor/sweep/1/angle') {
-          if (data.detecting && typeof data.angle === 'number') {
-            // Apply 130 degree offset and normalize to 0-360
-            const offsetAngle = ((data.angle + 130) % 360 + 360) % 360;
-            setSweepPosition(offsetAngle);
+        // Handle real encoder angle (raptor-encoder service, 5 Hz)
+        if (topic === MQTT_TOPICS.angle) {
+          if (typeof data.angle_deg === 'number') {
+            setSweepPosition(data.angle_deg);
           }
-          // If not detecting, don't update (freeze at last known position)
           return;
         }
 
@@ -259,13 +257,13 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
     },
   });
 
-  // Subscribe to state topic and sweep angle topic when connected
+  // Subscribe to state and angle topics when connected
   useEffect(() => {
     if (isConnected) {
       subscribe(topics.state);
-      subscribe('raptor/sweep/1/angle'); // Subscribe to sweep angle topic
+      subscribe(topics.angle);
     }
-  }, [isConnected, subscribe, topics.state]);
+  }, [isConnected, subscribe, topics.state, topics.angle]);
 
   const sweep = mockSweepData.find((s) => s.id === id);
 

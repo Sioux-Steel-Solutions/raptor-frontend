@@ -278,6 +278,7 @@ export function useNetworkAwareMqtt(options: NetworkAwareMqttOptions = {}) {
     cmd: `raptor/${site}/${device}/cmd`,
     status: `raptor/${site}/${device}/status`,
     faults: `raptor/${site}/${device}/faults`,
+    angle: `raptor/${site}/${device}/angle`,
   };
 
   return {
