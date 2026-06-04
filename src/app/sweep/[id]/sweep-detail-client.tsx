@@ -194,7 +194,7 @@ export function SweepDetailClient({ id, defaultTab = "controls" }: SweepDetailPr
         // Handle real encoder angle (raptor-encoder service, 5 Hz)
         if (topic === MQTT_TOPICS.angle) {
           if (typeof data.angle_deg === 'number') {
-            setSweepPosition(data.angle_deg);
+            setSweepPosition(((data.angle_deg % 360) + 360) % 360);
           }
           return;
         }
